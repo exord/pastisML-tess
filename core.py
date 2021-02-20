@@ -297,7 +297,7 @@ class BackgroundStarParameters(object):
         self.minmass = minmass
         
         self.parnames = {'Mass': ['mass', 'Solar mass', 'minit'],
-                         'Age': ['logage', 'Gyr [log]', ],
+                         'Age': ['logage', 'Gyr [log]', 'logage'],
                          'Metallicity': ['feh', '', 'z'],
                          'Distance': ['distance', 'pc', 'dist'],
                          'Albedo': ['albedo', '', 'albedo']
@@ -306,16 +306,17 @@ class BackgroundStarParameters(object):
         
         return
     
+    
     def draw(self, size):
         """Draw all parameters. Convenience function."""
-        draw_mass(size)
-        draw_logage(size)
-        draw_feh(size)
-        
+        for d in ['mass', 'logage', 'feh', 'distance', 'albedo']:
+            to_run = getattr(self, 'draw_{}'.format(d))
+            to_run(size)
+            
         self.drawn = 1
         
         return
-    
+
     def to_pastis(self, size=1):
         """Prepare dictionary to pass to pastis."""
         if not self.drawn:
@@ -340,12 +341,12 @@ class BackgroundStarParameters(object):
         amax = m0**(1 - alpha) / (1 - alpha)
         amin = self.minmass**(1 - alpha) / (1 - alpha)
         
-        bmax = self.maxmass**(1 - beta) / (1 - beta)
+        # bmax = self.maxmass**(1 - beta) / (1 - beta)
         bmin = m0**(1 - beta) /(1 - beta)
         
         # Integral over whole range
-        k = amax - amin + bmax - bmin
-        # k = amax - amin - bmin
+        # k = amax - amin + bmax - bmin
+        k = amax - amin - bmin
         
         # Limit quantiles
         q0 = (amax - amin)/k
@@ -384,7 +385,7 @@ class BackgroundStarParameters(object):
     def draw_distance(self, size=1):
         """Draw distance of background star (from target star)."""
         #TODO consider foreground stars.
-        self.distance = np.random.rand(size)**(1./3.) * self.qmax
+        self.distance = np.random.rand(size)**(1./3.) * self.maxdist
         return
        
     
