@@ -13,12 +13,38 @@ import numpy as np
 import pandas as pd
 
 from pastis import limbdarkening as ld
+from pastis.priors import moduleprior as mp
 
 homedir = os.getenv('HOME')
 mldir = os.path.join(homedir, 'EXOML', 'TESS-pastis')
 
 
-class TargetStarParameters(object):
+
+class Parameters(object):
+    """Global class for paramaters."""
+    
+    def __init__(self):
+        self.drawn = 0
+        
+        
+    def draw(self):
+        """Draw all parameters."""
+        raise NotImplementedError('draw method must be implemented on a '
+                                  'sub-class basis')
+        
+        
+    def to_pastis(self):
+        """Prepare dictionary to pass to pastis."""
+        assert self.draw, "Parameters not drawn. Use .draw method first."
+            
+        #TODO Need to compute Tc based on ph_tr and orbital parameters
+        pdict = dict([[par[-1], getattr(self, par[0])] for 
+                      par in self.parnames.values()])
+            
+        return pdict
+    
+    
+class TargetStarParameters(Parameters):
     """class for paeramters of the observed (TIC) target star."""
     
     def __init__(self, params, pbands=['Johnson-R',], **kwargs):
@@ -33,30 +59,49 @@ class TargetStarParameters(object):
         
         Other parameters are passed to the limb_darkening initialization.
         """
-        self.teff = params[0]
-        self.feh = params[1]
-        self.logg = params[2]
-        
         #TODO: Shall we include distance?
-        
+        self.params = params
+
         # An idea is to include possibility to use density
         # but this is messy with limbdarkening and requires initialisin
         # stellar tracks.
         # self.densflag = params[3]
-        
-        # The number of draws from other parameters is determined by 
-        # the size of the input array.
-        self.size = params.shape[1]
         
         # Initialise LDC table (if neeeded)
         if not hasattr(ld, 'LDCs'):
             ld.initialize_limbdarkening(pbands, **kwargs)
         self.inited_pbands = pbands
 
+        self.parnames = {'Effective Temperature': ['teff', 'K', 'teff'],
+                         'Surface gravity': ['logg', 'cgs [log]', 'logg'],
+                         'Metallicity': ['feh', '', 'z'],
+                         'Albedo': ['albedo', '', 'albedo']}
+        
         self.drawn = 0
 
         return 
     
+    
+    @property
+    def params(self):
+        """Property to return TIC parameters."""
+        return dict([['Teff', self.teff], ['logg', self.logg],
+                     ['Fe/H', self.feh]])
+    
+    @params.setter
+    def params(self, params):
+        """Property to set TIC parameters."""
+        self.teff = params[0]
+        self.logg = params[1]
+        self.feh = params[2]
+        
+        self._param_len = params.shape[1]
+
+    
+    def __len__(self):
+        """Len method."""
+        return self._param_len
+        
     
     def draw(self):
         """Draw all parameters."""
@@ -69,8 +114,8 @@ class TargetStarParameters(object):
     
     def to_pastis(self):
         """Prepare dictionary to pass to PASTIS."""
-        if not self.drawn:
-            self.draw()
+        # Prepare first set of parameters
+        pdict = super().to_pastis()
             
         # Make LD coefficients dictionary
         uadict = {}
@@ -82,15 +127,19 @@ class TargetStarParameters(object):
                 uadict[band] = ldc[:, 0]
                 ubdict[band] = ldc[:, 1]        
         
-        pdict = {'teff': self.teff,
-                 'logg': self.logg, 
-                 'z': self.feh,
-                 'albedo': self.albedo,
-                 'ua': uadict,
-                 'ub': ubdict,
-                 # fix beaming effect to zero
-                 'B': self.feh * 0.0
-                 }
+        pdict.update({'ua': uadict, 'ub': ubdict, 'B': self.feh * 0.0})
+
+# =============================================================================
+#         pdict = {'teff': self.teff,
+#                  'logg': self.logg, 
+#                  'z': self.feh,
+#                  'albedo': self.albedo,
+#                  'ua': uadict,
+#                  'ub': ubdict,
+#                  # fix beaming effect to zero
+#                  'B': self.feh * 0.0
+#                  }
+# =============================================================================
 
         return pdict
         
@@ -106,7 +155,7 @@ class TargetStarParameters(object):
     
     def draw_albedo(self):
         """Draw albedo of star."""
-        self.albedo = stellar_albedo(self.size)
+        self.albedo = stellar_albedo(len(self))
         return
     
 
@@ -127,9 +176,9 @@ class TargetStarParameters(object):
         
 
 
-class PlanetParameters(object):
+class PlanetParameters(Parameters):
     """class of realistic parameters for the planet scenario."""
-
+    
     def __init__(self, table_path=os.path.join(mldir, 'Hsu', 'table2.dat'),
                  rates_column=4, interbindist='flat'):
         """
@@ -144,10 +193,10 @@ class PlanetParameters(object):
         :param str interbindist: defines method to sample within bin. Options
         are "flat" or "logflat"
         """
-        sampledist = ['flat', 'logflat']
-
-        assert interbindist in sampledist, ("interbindist must be \'{}\'"
-                                            "".format('\' or \''.join(sampledist)))
+        validdist = ['flat', 'logflata']
+        
+        assert interbindist in validdist, \
+        ("interbindist must be \'{}\'".format('\' or \''.join(validdist)))
         self.sampledist = interbindist
         
         dd = pd.read_csv(table_path, delim_whitespace=True, header=None,
@@ -282,10 +331,10 @@ class PlanetParameters(object):
     
 class BackgroundStarParameters(object):
     """Class with realistic parameters for background stars."""
-
+    
     def __init__(self, maxdist=1000, minmass=0.05, maxmass=10, *args):
         """
-        Instantiate class.
+        Instatiate class.
         
         :param float maxdist: maximum distance [in pc] at which a background
         star is allowed to be located.
@@ -311,28 +360,20 @@ class BackgroundStarParameters(object):
         """Draw all parameters. Convenience function."""
         for d in ['mass', 'logage', 'feh', 'distance', 'albedo']:
             to_run = getattr(self, 'draw_{}'.format(d))
+            # Run draw
             to_run(size)
             
         self.drawn = 1
         
         return
-
-    def to_pastis(self, size=1):
-        """Prepare dictionary to pass to pastis."""
-        if not self.drawn:
-            self.draw(size)
-            
-        #TODO Need to compute Tc based on ph_tr and orbital parameters
-        pdict = dict([[par[-1], getattr(self, par[0])] for 
-                      par in self.parnames.values()])
-            
-        return pdict
-
+    
     
     def draw_mass(self, size=1):
-        """Draw mass of background star."""
-        # TODO use IMF from Robin+2003
-
+        """
+        Draw mass of background star.
+        
+        Use IMF from Robin+2003
+        """
         # Parameters from Robin+2003
         alpha = 1.6
         beta = 3.0
@@ -387,8 +428,127 @@ class BackgroundStarParameters(object):
         #TODO consider foreground stars.
         self.distance = np.random.rand(size)**(1./3.) * self.maxdist
         return
-       
     
+    
+class SecondaryStarParameters(BackgroundStarParameters):
+    """Class for parameters of secondary background star."""
+    
+    def __init__(self, primarystar):
+        
+        assert primarystar.drawn, "Undrawn primary star parameters. Abort."
+        
+        super().__init__(maxdist=primarystar.maxdist, minmass=primarystar.mindist, 
+                         maxmass=primarystar.maxmass)
+        
+        self.primary = primarystar
+        
+        return
+    
+    
+    def draw_q(self, size):
+        """
+        Draw mass ratio.
+        
+        Use statistics by Raghavan et al. (2010; their fig. 16, left panel).
+        
+        See moduleprior.q_def for more details.
+        """
+        self.q = np.empty(size)
+        
+        # TODO: awful; try to vectorize function in moduleprior
+        for i in range(size):
+            self.q[i] = mp.q_def()
+        return
+        
+        
+    def draw(self):
+        """Draw all parameters. Convenience function."""
+        size = len(self.primarystar.mass)
+        
+        # Draw q
+        if not hasattr(self, 'q'):
+            self.draw_q(size)
+        
+        # Draw parameters using parent method.
+        super().draw(size)
+
+        # Modify mass; pastis object builder will take care of the rest
+        self.mass = self.primarystar.mass * self.q
+        
+        return
+        
+       
+class OrbitParameters(Parameters):
+    """Class of orbital parameters (except periods)."""
+    
+    def __init__(self, orbittype='planet'):
+        
+        valid_types = ['planet', 'binary']
+        
+        assert orbittype in valid_types, \
+        ("orbittype must be \'{}\'".format('\' or \''.join(valid_types)))
+            
+        self.type = orbittype
+        
+        self.parnames = {'orb_ecc': ['ecc', '', 'ecc'],
+                         'orb_omega': ['omega_rad', 'rad', 'omega'],
+                         'orb_incl': ['incl_rad', 'rad', 'incl'],
+                         'orb_phtr': ['ph_tr',],
+                         }
+        
+    
+    def draw(self, size):
+        """
+        Draw all parameters.
+        
+        There is a small difference if it is a binary or a planet
+        orbit.
+        """
+        if self.type == 'planet':
+            self.draw_orbit(size, thetamin_deg=60.0)
+        elif self.type == 'binary':
+            self.draw_orbit(size, thetamin_deg=0.0)
+        return
+        
+    
+    def to_pastis(self):
+        """
+        Specific version of to_pastis for orbits.
+        
+        Pastis requires angles in degrees, so transformation is
+        necessary.
+        """
+        pdict = super().to_pastis()
+        
+        # pass omega and incl to degrees, as required in pastis
+        for angle in ['omega', 'incl']:
+            pdict[angle] *= 180/np.pi
+            
+        return pdict
+    
+    
+    def draw_orbit(self, size=1, thetamin_deg=60.0, eccentric=True):
+        """Draw orbital parameters, except period."""
+        # Random inclination between thetamin and 90.0 deg
+        k = np.cos(thetamin_deg * np.pi/180.0)
+        self.incl_rad = np.arccos(k * (1 - np.random.rand(size)))
+        
+        # transit phase
+        self.ph_tr = np.random.rand(size)
+        
+        # Eccentricity
+        if eccentric:
+            self.ecc = np.abs(np.random.randn(size) * 0.3)
+            self.omega_rad = np.random.rand(size) * 2 * np.pi
+            
+        else:
+            self.ecc = np.array([0]*size)
+            self.omega_rad = np.array([0]*size)
+            
+        return
+    
+
+
 def stellar_albedo(size):
     """Random sample of stellar albedos."""
     #TODO include reference for albedo values
