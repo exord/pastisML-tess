@@ -117,7 +117,9 @@ class TargetStarParameters(Parameters):
         # Prepare first set of parameters
         pdict = super().to_pastis()
             
-        # Make LD coefficients dictionary
+        # TODO Fix crash in object builder for LDC dicts.
+        # Make LD coefficients dictionary [not used; for now keep
+        # coefficient from last band iterated]
         uadict = {}
         ubdict = {}
         for band in self.inited_pbands:
@@ -125,9 +127,11 @@ class TargetStarParameters(Parameters):
                 ldc = getattr(self, 'LDC_{}'.format(band))
                 
                 uadict[band] = ldc[:, 0]
-                ubdict[band] = ldc[:, 1]        
+                ubdict[band] = ldc[:, 1]
         
-        pdict.update({'ua': uadict, 'ub': ubdict, 'B': self.feh * 0.0})
+        # pdict.update({'ua': uadict, 'ub': ubdict, 'B': self.feh * 0.0})
+        pdict.update({'ua': ldc[:, 0], 'ub': ldc[:, 1], 
+                      'B': self.feh * 0.0})
 
 # =============================================================================
 #         pdict = {'teff': self.teff,
@@ -329,10 +333,10 @@ class PlanetParameters(Parameters):
         return
     
     
-class BackgroundStarParameters(object):
+class BackgroundStarParameters(Parameters):
     """Class with realistic parameters for background stars."""
     
-    def __init__(self, maxdist=1000, minmass=0.05, maxmass=10, *args):
+    def __init__(self, maxdist=1000, minmass=0.05, *args):
         """
         Instatiate class.
         
@@ -437,8 +441,8 @@ class SecondaryStarParameters(BackgroundStarParameters):
         
         assert primarystar.drawn, "Undrawn primary star parameters. Abort."
         
-        super().__init__(maxdist=primarystar.maxdist, minmass=primarystar.mindist, 
-                         maxmass=primarystar.maxmass)
+        super().__init__(maxdist=primarystar.maxdist, 
+                         minmass=primarystar.minmass)
         
         self.primary = primarystar
         
@@ -461,9 +465,21 @@ class SecondaryStarParameters(BackgroundStarParameters):
         return
         
         
+    def draw_period(self, size):
+        """
+        Draw period from the distribution by Raghavan et al. (2010; fig. 13).
+        
+        Beware! I was unable to reproduce this plot based on their published
+        tables. From now on, it is a leap of faith.
+        """
+        self.log_period = np.random.randn(size) * 2.28 + 5.03
+        self.period = np.exp(self.log_period)
+        return
+        
+        
     def draw(self):
         """Draw all parameters. Convenience function."""
-        size = len(self.primarystar.mass)
+        size = len(self.primary.mass)
         
         # Draw q
         if not hasattr(self, 'q'):
@@ -473,7 +489,10 @@ class SecondaryStarParameters(BackgroundStarParameters):
         super().draw(size)
 
         # Modify mass; pastis object builder will take care of the rest
-        self.mass = self.primarystar.mass * self.q
+        self.mass = self.primary.mass * self.q
+        
+        # raw period parameters
+        self.draw_period(size)
         
         return
         
@@ -508,6 +527,8 @@ class OrbitParameters(Parameters):
             self.draw_orbit(size, thetamin_deg=60.0)
         elif self.type == 'binary':
             self.draw_orbit(size, thetamin_deg=0.0)
+        else:
+            raise ValueError('Unknown object type')
         return
         
     
