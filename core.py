@@ -37,7 +37,6 @@ class Parameters(object):
         """Prepare dictionary to pass to pastis."""
         assert self.draw, "Parameters not drawn. Use .draw method first."
             
-        #TODO Need to compute Tc based on ph_tr and orbital parameters
         pdict = dict([[par[-1], getattr(self, par[0])] for 
                       par in self.parnames.values()])
             
@@ -75,7 +74,8 @@ class TargetStarParameters(Parameters):
         self.parnames = {'Effective Temperature': ['teff', 'K', 'teff'],
                          'Surface gravity': ['logg', 'cgs [log]', 'logg'],
                          'Metallicity': ['feh', '', 'z'],
-                         'Albedo': ['albedo', '', 'albedo']}
+                         'Albedo': ['albedo', '', 'albedo'],
+                         'Redenning': ['ebmv', '', 'ebmv']}
         
         self.drawn = 0
 
@@ -107,6 +107,7 @@ class TargetStarParameters(Parameters):
         """Draw all parameters."""
         self.draw_albedo()
         self.draw_ldc()
+        self.draw_redenning()
         
         self.drawn = 1
         return
@@ -177,7 +178,15 @@ class TargetStarParameters(Parameters):
             setattr(self, 'LDC_{}'.format(band), np.array(ldc_p))
 
         return
+    
+    def draw_redenning(self):
+        """
+        Draw value of redenning, E(B-V).
         
+        NOTE: until further notice this just returns 0.
+        """
+        self.ebmv = np.zeros(len(self))
+        return
 
 
 class PlanetParameters(Parameters):
@@ -227,7 +236,7 @@ class PlanetParameters(Parameters):
                          'orb_ecc': ['ecc', '', 'ecc'],
                          'orb_omega': ['omega', 'rad', 'omega'],
                          'orb_incl': ['incl_rad', 'rad', 'incl'],
-                         'orb_phtr': ['ph_tr',],
+                         'orb_phtr': ['ph_tr', '', 'T0'],
                          'pla_radius': ['radius', 'earth', 'Rp'],
                          'pla_mass': ['mass', 'earth', 'Mp'],
                          'pla_albedo': ['albedo', 'albedo']}
@@ -258,8 +267,6 @@ class PlanetParameters(Parameters):
         if not self.drawn:
             self.draw(size)
             
-        #TODO Need to compute Tc based on ph_tr and orbital parameters
-        
         pdict = dict([[par[-1], getattr(self, par[0])] for 
                       par in self.parnames.values()])
             
@@ -353,7 +360,8 @@ class BackgroundStarParameters(Parameters):
                          'Age': ['logage', 'Gyr [log]', 'logage'],
                          'Metallicity': ['feh', '', 'z'],
                          'Distance': ['distance', 'pc', 'dist'],
-                         'Albedo': ['albedo', '', 'albedo']
+                         'Albedo': ['albedo', '', 'albedo'],
+                         'Redenning': ['ebmv', '', 'ebmv']
                          }
         self.drawn = 0
         
@@ -362,7 +370,7 @@ class BackgroundStarParameters(Parameters):
     
     def draw(self, size):
         """Draw all parameters. Convenience function."""
-        for d in ['mass', 'logage', 'feh', 'distance', 'albedo']:
+        for d in ['mass', 'logage', 'feh', 'distance', 'albedo', 'redenning']:
             to_run = getattr(self, 'draw_{}'.format(d))
             # Run draw
             to_run(size)
@@ -431,6 +439,15 @@ class BackgroundStarParameters(Parameters):
         """Draw distance of background star (from target star)."""
         #TODO consider foreground stars.
         self.distance = np.random.rand(size)**(1./3.) * self.maxdist
+        return
+    
+    def draw_redenning(self, size=1):
+        """
+        Draw value of redenning, E(B-V).
+        
+        NOTE: until further notice this just returns 0.
+        """
+        self.ebmv = np.zeros(size)
         return
     
     
@@ -512,7 +529,7 @@ class OrbitParameters(Parameters):
         self.parnames = {'orb_ecc': ['ecc', '', 'ecc'],
                          'orb_omega': ['omega_rad', 'rad', 'omega'],
                          'orb_incl': ['incl_rad', 'rad', 'incl'],
-                         'orb_phtr': ['ph_tr',],
+                         'orb_phtr': ['ph_tr', '', 'T0'],
                          }
         
     
@@ -567,7 +584,6 @@ class OrbitParameters(Parameters):
             self.omega_rad = np.array([0]*size)
             
         return
-    
 
 
 def stellar_albedo(size):
