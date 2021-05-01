@@ -17,7 +17,7 @@ feh = np.random.randn(size)*0.01
 logg = np.random.randn(size)*0.01 + 4.4
 
 params = np.array([teff, logg, feh]*100).reshape(3, 100, order='F')
-
+len(params)
 # tt = c.TargetStarParameters(params)
 
 tt = c.BackgroundStarParameters()
@@ -42,6 +42,8 @@ def test_object_build():
 
 
 if __name__ == '__main__':
+    
+   # Initialise pastis
     from pastis import isochrones, limbdarkening, photometry
     from pastis.extlib import SAMdict, EMdict
     from pastis.paths import filterpath, zeromagfile
@@ -55,19 +57,25 @@ if __name__ == '__main__':
     isochrones.interpol_tracks(EMdict['Dartmouth'])
     isochrones.prepare_tracks_target(EMdict['Dartmouth'])
 
-    # input_dict = test_full_draw()
+    # Draw parameters for BEB
+    input_dict = test_full_draw()
     
     # Read input dict constructed previously
+
     with open('/Users/rodrigo/code/python/packages/'
               'pastisML-tess-new/input_dict_beb.dat', 
               'rb') as f:
         # pickle.dump(input_dict, f)
         input_dict = pickle.load(f)
 
+
+    # Create pastis objects    
     objs = []
 
     # dd = input_dict.copy()
     from pastis import ObjectBuilder as ob
+    
+    # Discitonary that will finally be passed to pastis
     dd = {}
     for i in range(params.shape[-1]):
         print(i)
@@ -88,7 +96,7 @@ if __name__ == '__main__':
                 else:
                     raise TypeError('WTF?')
                     
-
+        # Construct objects
         from pastis.exceptions import EvolTrackError
         try:
             objs.append(ob.ObjectBuilder(dd))
