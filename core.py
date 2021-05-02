@@ -19,7 +19,6 @@ homedir = os.getenv('HOME')
 mldir = os.path.join(homedir, 'EXOML', 'TESS-pastis')
 
 
-
 class Parameters(object):
     """Global class for paramaters."""
     
@@ -234,7 +233,7 @@ class PlanetParameters(Parameters):
         
         self.parnames = {'orb_period': ['period', 'days', 'P'],
                          'orb_ecc': ['ecc', '', 'ecc'],
-                         'orb_omega': ['omega', 'rad', 'omega'],
+                         'orb_omega': ['omega_rad', 'rad', 'omega'],
                          'orb_incl': ['incl_rad', 'rad', 'incl'],
                          'orb_phtr': ['ph_tr', '', 'T0'],
                          'pla_radius': ['radius', 'earth', 'Rp'],
@@ -258,18 +257,18 @@ class PlanetParameters(Parameters):
         return        
         
     
-    def to_pastis(self, size=1):
+    def to_pastis(self):
         """
         Prepare dictionary to pass to PASTIS.
         
         A number of unit transformations are needed to achieve this.
         """
-        if not self.drawn:
-            self.draw(size)
-            
-        pdict = dict([[par[-1], getattr(self, par[0])] for 
-                      par in self.parnames.values()])
-            
+        pdict = super().to_pastis()
+        
+        # pass omega and incl to degrees, as required in pastis            
+        for angle in ['omega', 'incl']:
+            pdict[angle] *= 180/np.pi
+        
         return pdict
         
         

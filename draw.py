@@ -34,13 +34,26 @@ def draw_parameters(params, scenario, nsimu=1):
     ticstar = c.TargetStarParameters(params)
     ticstar.draw()
     
+    # Draw parameters and return input dict for pastis
     if scenario in ['PLA', 'planet']:
-        _draw_parameters_pla(ticstar)
+        pla_params = _draw_parameters_pla(ticstar)
+        
+        # Construct planet dict for pastis        
+        # planetdict = pla_params[-1].to_pastis()
+        # Add tree-like structure
+        planetdict = {'star1': 'Target1', 'planet1': 'Planet1'}
+        # planetdict['P'] = pla_params[0].period
+
+        input_dict = {'Target1': ticstar.to_pastis(),
+                      'Planet1': pla_params.to_pastis(),
+                      'PlanSys1': planetdict}        
         
     elif scenario in ['BEB', 'beb']:
         beb_params = _draw_parameters_beb(ticstar)
         
+        # Construct binary dict for pastis
         binarydict = beb_params[-1].to_pastis()
+        # Add tree-like structure
         binarydict.update({'star1': 'Blend1', 'star2': 'Blend2'})
         binarydict['P'] = beb_params[1].period
         
@@ -54,11 +67,13 @@ def draw_parameters(params, scenario, nsimu=1):
 
 
 def _draw_parameters_pla(ticstar):
-    
-    # Parameters represent Teff, logg and Fe/H of planet host
-    teff, logg, feh = params
-    
-    # LDC coefficients will be drawn using pastis
+    """Draw parameters for the Planet scenario."""
+    # Instatiate planetary parameters
+    planet = c.PlanetParameters()
+    # Draw parameters
+    planet.draw(len(ticstar))
+        
+    return planet
     
 
 def _draw_parameters_beb(ticstar):
@@ -78,7 +93,7 @@ def _draw_parameters_beb(ticstar):
     bkg_secondary.draw()
     
     # Draw orbit
-    orbit = c.OrbitParameters()
+    orbit = c.OrbitParameters(orbittype='binary')
     orbit.draw(len(ticstar))
     
     return [bkg_primary, bkg_secondary, orbit]

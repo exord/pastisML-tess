@@ -27,23 +27,12 @@ tt2.draw()
 orbit = c.OrbitParameters()
 orbit.draw(size)
 
-# print(len(tt))
-
-def test_full_draw(nsimu=1):
-    return d.draw_parameters(params, 'BEB', nsimu=nsimu)
-
-
-def test_object_build():
-    from pastis import ObjectBuilder as ob
-
-    input_dict = test_full_draw()
-
-    return ob.ObjectBuilder(input_dict)
-
 
 if __name__ == '__main__':
     
-   # Initialise pastis
+    scenario = 'PLA'
+    
+    # Initialise pastis
     from pastis import isochrones, limbdarkening, photometry
     from pastis.extlib import SAMdict, EMdict
     from pastis.paths import filterpath, zeromagfile
@@ -58,16 +47,16 @@ if __name__ == '__main__':
     isochrones.prepare_tracks_target(EMdict['Dartmouth'])
 
     # Draw parameters for BEB
-    input_dict = test_full_draw()
+    input_dict = d.draw_parameters(params, scenario, nsimu=1)
     
     # Read input dict constructed previously
-
-    with open('/Users/rodrigo/code/python/packages/'
-              'pastisML-tess-new/input_dict_beb.dat', 
-              'rb') as f:
-        # pickle.dump(input_dict, f)
-        input_dict = pickle.load(f)
-
+# =============================================================================
+#     with open('/Users/rodrigo/code/python/packages/'
+#               'pastisML-tess-new/input_dict_beb.dat', 
+#               'rb') as f:
+#         # pickle.dump(input_dict, f)
+#         input_dict = pickle.load(f)
+# =============================================================================
 
     # Create pastis objects    
     objs = []
@@ -94,6 +83,7 @@ if __name__ == '__main__':
                 elif isinstance(x, str):
                     dd[obj][par2] = input_dict[obj][par]
                 else:
+                    print(x)
                     raise TypeError('WTF?')
                     
         # Construct objects
@@ -101,5 +91,33 @@ if __name__ == '__main__':
         try:
             objs.append(ob.ObjectBuilder(dd))
         except EvolTrackError as ex:
+            # Muchos no llegan al final porque los parámetros no 
+            # se pueden interpolar
             print(ex)
             continue
+        
+    #  Construct light curves
+    f = []
+    for obj in objs:
+        # Get period from object list
+        if scenario == 'PLA':
+            P = obj[0].planets[0].orbital_parameters.P
+        elif scenario == 'BEB':
+            P = obj[0].orbital_parameters.P
+                    
+        # sample according to value of period
+        tess_cadence_min = 2.0
+        n_points = np.int(np.ceil(P * 24 * 60 / tess_cadence_min))
+        tt = np.linspace(0, 1, n_points)
+        from pastis.models import PHOT
+        
+        try:
+            lci = PHOT.PASTIS_PHOT(tt, 'Johnson-R', 
+                                   True, 0.0, 1.0, 0.0, *obj)
+        except:
+            continue
+        
+        f.append([lci, P, n_points])
+        
+        
+    
