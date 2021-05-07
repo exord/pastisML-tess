@@ -12,7 +12,7 @@ import os
 import numpy as np
 import pandas as pd
 
-from pastis import limbdarkening as ld
+# from pastis import limbdarkening as ld
 from pastis.priors import moduleprior as mp
 
 homedir = os.getenv('HOME')
@@ -65,11 +65,15 @@ class TargetStarParameters(Parameters):
         # stellar tracks.
         # self.densflag = params[3]
         
-        # Initialise LDC table (if neeeded)
-        if not hasattr(ld, 'LDCs'):
-            ld.initialize_limbdarkening(pbands, **kwargs)
-        self.inited_pbands = pbands
-
+# =============================================================================
+#         # Initialise LDC table (if neeeded)
+#         if not hasattr(ld, 'LDCs'):
+#             ld.initialize_limbdarkening(pbands, **kwargs)
+#             self.inited_pbands = pbands
+#         else:
+#             self.inited_pbands = list(ld.LDCs[0].keys())
+# =============================================================================
+        
         self.parnames = {'Effective Temperature': ['teff', 'K', 'teff'],
                          'Surface gravity': ['logg', 'cgs [log]', 'logg'],
                          'Metallicity': ['feh', '', 'z'],
@@ -105,7 +109,7 @@ class TargetStarParameters(Parameters):
     def draw(self):
         """Draw all parameters."""
         self.draw_albedo()
-        self.draw_ldc()
+        # self.draw_ldc()
         self.draw_redenning()
         
         self.drawn = 1
@@ -116,23 +120,31 @@ class TargetStarParameters(Parameters):
         """Prepare dictionary to pass to PASTIS."""
         # Prepare first set of parameters
         pdict = super().to_pastis()
-            
-        # TODO Fix crash in object builder for LDC dicts.
-        # Make LD coefficients dictionary [not used; for now keep
-        # coefficient from last band iterated]
-        uadict = {}
-        ubdict = {}
-        for band in self.inited_pbands:
-            if hasattr(self, 'LDC_{}'.format(band)):
-                ldc = getattr(self, 'LDC_{}'.format(band))
-                
-                uadict[band] = ldc[:, 0]
-                ubdict[band] = ldc[:, 1]
-        
-        # pdict.update({'ua': uadict, 'ub': ubdict, 'B': self.feh * 0.0})
-        pdict.update({'ua': ldc[:, 0], 'ub': ldc[:, 1], 
-                      'B': self.feh * 0.0})
 
+        pdict.update({'B': self.feh * 0.0})
+            
+# =============================================================================
+#         # THIS WAS BEFORE, WHEN LDC WERE DRAWN HERE.
+#         # But this is useless, as PASTIS will draw them again!
+#         # check_pbands and draw_ldc are therefore also commented
+#
+#         # TODO Fix crash in object builder for LDC dicts.
+#         # Make LD coefficients dictionary [not used; for now keep
+#         # coefficient from last band iterated]
+#         uadict = {}
+#         ubdict = {}
+#         for band in self.inited_pbands:
+#             if hasattr(self, 'LDC_{}'.format(band)):
+#                 ldc = getattr(self, 'LDC_{}'.format(band))
+#                 
+#                 uadict[band] = ldc[:, 0]
+#                 ubdict[band] = ldc[:, 1]
+#         
+#         # pdict.update({'ua': uadict, 'ub': ubdict, 'B': self.feh * 0.0})
+#         pdict.update({'ua': ldc[:, 0], 'ub': ldc[:, 1], 
+#                       'B': self.feh * 0.0})
+# 
+# =============================================================================
 # =============================================================================
 #         pdict = {'teff': self.teff,
 #                  'logg': self.logg, 
@@ -147,36 +159,39 @@ class TargetStarParameters(Parameters):
 
         return pdict
         
-    
-    def check_pbands(self, pbands):
-        """Check that all elements in a list of photometric bands is initiated."""
-        for p in pbands:
-            if p not in self.inited_pbands:
-                raise Exception('Sorry; you did not ask for photometric band '
-                                '{} at instantiation.'.format(p))
-        return
-                
-    
+        
     def draw_albedo(self):
         """Draw albedo of star."""
         self.albedo = stellar_albedo(len(self))
-        return
-    
+        return  
 
-    def draw_ldc(self, pbands=None):
-        """Draw quadratic limb darkening coefficients for target stars."""
-        if pbands is not None:
-            # Check pbands
-            self.check_pbands(pbands)
-        else:
-            pbands = self.inited_pbands
-        
-        for band in pbands:
-            ldc_p = [ld.get_LD(teff, logg, feh, band) for 
-                     teff, logg, feh in zip(self.teff, self.logg, self.feh)]
-            setattr(self, 'LDC_{}'.format(band), np.array(ldc_p))
+# =============================================================================
+#     def check_pbands(self, pbands):
+#         """Check that all elements in a list of photometric bands is initiated."""
+#         for p in pbands:
+#             if p not in self.inited_pbands:
+#                 raise Exception('Sorry; you did not ask for photometric band '
+#                                 '{} at instantiation.'.format(p))
+#         return
+#                 
+# =============================================================================
 
-        return
+# =============================================================================
+#     def draw_ldc(self, pbands=None):
+#         """Draw quadratic limb darkening coefficients for target stars."""
+#         if pbands is not None:
+#             # Check pbands
+#             self.check_pbands(pbands)
+#         else:
+#             pbands = self.inited_pbands
+#         
+#         for band in pbands:
+#             ldc_p = [ld.get_LD(teff, logg, feh, band) for 
+#                      teff, logg, feh in zip(self.teff, self.logg, self.feh)]
+#             setattr(self, 'LDC_{}'.format(band), np.array(ldc_p))
+# 
+#         return
+# =============================================================================
     
     def draw_redenning(self):
         """

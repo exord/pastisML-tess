@@ -37,9 +37,9 @@ if __name__ == '__main__':
     from pastis.extlib import SAMdict, EMdict
     from pastis.paths import filterpath, zeromagfile
 
-    limbdarkening.initialize_limbdarkening(['Johnson-R',])
+    limbdarkening.initialize_limbdarkening(['Johnson-R', 'TESS'])
 
-    photometry.initialize_phot(['Johnson-R',], zeromagfile, filterpath,
+    photometry.initialize_phot(['Johnson-R', 'TESS'], zeromagfile, filterpath,
                                 AMmodel=SAMdict['BT-settl'])
     #photometry.initialize_phot_WD()
 
@@ -112,7 +112,7 @@ if __name__ == '__main__':
         from pastis.models import PHOT
         
         try:
-            lci = PHOT.PASTIS_PHOT(tt, 'Johnson-R', 
+            lci = PHOT.PASTIS_PHOT(tt, 'TESS', 
                                    True, 0.0, 1.0, 0.0, *obj)
         except:
             continue
