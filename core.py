@@ -14,6 +14,7 @@ import pandas as pd
 
 # from pastis import limbdarkening as ld
 from pastis.priors import moduleprior as mp
+from pastis.MCMC import priors
 
 homedir = os.getenv('HOME')
 mldir = os.path.join(homedir, 'EXOML', 'TESS-pastis')
@@ -590,7 +591,8 @@ class OrbitParameters(Parameters):
         
         # Eccentricity
         if eccentric:
-            self.ecc = np.abs(np.random.randn(size) * 0.3)
+            ecc_prior = priors.TruncatedUNormalPrior(0., 0.3, 0., 1.)
+            self.ecc = ecc_prior.rvs(size)
             self.omega_rad = np.random.rand(size) * 2 * np.pi
             
         else:
