@@ -18,6 +18,63 @@ import draw as d
 # Read parameters
 from parameters import SCENARIO, NSIMU_PER_TIC_STAR
 
+#to force garbage collection
+import gc
+
+def gen_files(params, part_num):
+    # Draw parameters for scenario
+    input_dict = d.draw_parameters(params, SCENARIO, nsimu=NSIMU_PER_TIC_STAR)
+    
+    # Create objects 
+    object_list = s.build_objects(input_dict, len(params.T))
+    
+    # Compute model light curves
+    lc = s.lightcurves(object_list, scenario=SCENARIO, lc_cadence_min=2.0)
+    
+    # Save index and simulations
+    
+    out_file = open("./simulations/lightcurves-index-"+str(part_num)+".txt", "w")
+    
+    #periods candidate
+    if SCENARIO=='BEB':
+        periods_dict = input_dict['IsoBinary1']['P']
+    #if SCENARIO=='PLA':
+    
+    for simu_number in range(len(lc)):
+        out_file_line=[]
+      
+        #which P was successfull    
+        #TODO hay una forma de hacer mejor esto? es horrible
+        pos_elem = np.where(periods_dict==lc[simu_number][1])[0][0]
+        
+        #acá recibiriamos otra lista con los id? para matchear con cada entrada del input_dict
+        for obj in input_dict:
+            pd = input_dict[obj]
+            for par in pd:
+                if isinstance(pd[par], (np.ndarray, np.generic) ): 
+                    out_file_line.append((par,pd[par][pos_elem]))
+                else: #e.g. istar1:Blend1
+                    out_file_line.append((par,pd[par]))
+                    
+        #save simulation and values            
+        simu_name = './simulations/simu-'+str(part_num)+"-"+str(simu_number)+'.csv'   
+        print("Saving slice:",part_num, "simulation:", simu_number)
+        np.savetxt(simu_name, lc[simu_number][0], delimiter=',') #as np array
+    
+        for tuple in out_file_line:
+                    out_file.write(str(tuple[0]) + " "+ str(tuple[1]) + ",")
+                
+        out_file.write(simu_name + "\n")
+    out_file.close()
+    #just in case, we force the garbage collection
+    del lc
+    del input_dict
+    del object_list
+    gc.collect()
+    print("Done!")
+
+
+
 # Read / Create TIC star parameter list
 ## without real parameters
 # teff = np.random.randn(NSIMU_PER_TIC_STAR)*20 + 5777
@@ -26,24 +83,6 @@ from parameters import SCENARIO, NSIMU_PER_TIC_STAR
 
 # nrepeat = 20
 # params = np.array([teff, logg, feh]*nrepeat).reshape(3, nrepeat, order='F')
-
-print("Reading input files")
-tess_TEFF_LOGG_MH_filename = "tic_dec30_00S__28_00S_ID_TEFF_LOGG_MH.csv"
-tess_MH_filename = "tic_dec30_00S__28_00S_ID_MH.csv"
-
-TEFF_LOGG_MH = pd.read_csv(tess_TEFF_LOGG_MH_filename)
-TEFF_LOGG_MH = TEFF_LOGG_MH[['Teff','logg','MH']].to_numpy()
-
-MH = pd.read_csv(tess_MH_filename)
-MH = MH['MH'].to_numpy()
-
-#debe haber una forma mas numpy para esto
-for a in TEFF_LOGG_MH:
-    if np.isnan(a[2]):
-        a[2] = np.random.choice(MH)
-
-#para poder usar el mismo formato que habia antes
-params = TEFF_LOGG_MH.flatten().reshape(3, len(TEFF_LOGG_MH), order='F')
 
 # Initialise pastis
 
@@ -61,48 +100,43 @@ isochrones.prepare_tracks_target(extlib.EMdict['Dartmouth'])
 # Because pastis is crap, we can only import this after initialisation
 import simulation as s
 
-# Draw parameters for scenario
-input_dict = d.draw_parameters(params, SCENARIO, nsimu=NSIMU_PER_TIC_STAR)
 
-# Create objects 
-object_list = s.build_objects(input_dict, len(params.T))
+print("Reading input files")
+tess_TEFF_LOGG_MH_filename = "tic_dec30_00S__28_00S_ID_TEFF_LOGG_MH.csv"
+tess_MH_filename = "tic_dec30_00S__28_00S_ID_MH.csv"
 
-# Compute model light curves
-lc = s.lightcurves(object_list, scenario=SCENARIO, lc_cadence_min=2.0)
+TEFF_LOGG_MH = pd.read_csv(tess_TEFF_LOGG_MH_filename)
+TEFF_LOGG_MH = TEFF_LOGG_MH[['Teff','logg','MH']].to_numpy()
 
-# Save index and simulations
+### si se va a crear otro arreglo con el ID
+'''
+TEFF_LOGG_MH = TEFF_LOGG_MH[['ID','Teff','logg','MH']].to_numpy()
 
-out_file = open("./simulations/lightcurves-index.txt", "w")
+Y la parte de params deberia quedar
+params = TEFF_LOGG_MH_slice.flatten().reshape(4, len(TEFF_LOGG_MH_slice), order='F')
+'''
 
-#periods candidate
-if SCENARIO=='BEB':
-    periods_dict = input_dict['IsoBinary1']['P']
-#if SCENARIO=='PLA':
 
-for simu_number in range(len(lc)):
-    out_file_line=[]
-  
-    #which P was successfull    
-    #TODO hay una forma de hacer mejor esto? es horrible
-    pos_elem = np.where(periods_dict==lc[simu_number][1])[0][0]
-    
-    for obj in input_dict:
-        pd = input_dict[obj]
-        for par in pd:
-            if isinstance(pd[par], (np.ndarray, np.generic) ): 
-                out_file_line.append((par,pd[par][pos_elem]))
-            else: #e.g. istar1:Blend1
-                out_file_line.append((par,pd[par]))
-                
-    #save simulation and values            
-    simu_name = './simulations/simu-'+str(simu_number)+'.csv'   
-    np.savetxt(simu_name, lc[simu_number][0], delimiter=',') #as np array
+MH = pd.read_csv(tess_MH_filename)
+MH = MH['MH'].to_numpy()
 
-    for tuple in out_file_line:
-                out_file.write(str(tuple[0]) + " "+ str(tuple[1]) + ",")
-            
-    out_file.write(simu_name + "\n")
-out_file.close()
+#debe haber una forma mas numpy para esto
+for a in TEFF_LOGG_MH:
+    if np.isnan(a[2]):
+        a[2] = np.random.choice(MH)
+
+#para partir en batch de 5k estrellas, enumero las particioes también
+start = 0
+for part, end in enumerate(np.linspace(5000, len(TEFF_LOGG_MH), 16, dtype=int)):
+    print (start, end, "Part:", part)
+    TEFF_LOGG_MH_slice = TEFF_LOGG_MH[start:end]
+    #para usar el mismo formato que habia antes
+    params = TEFF_LOGG_MH_slice.flatten().reshape(3, len(TEFF_LOGG_MH_slice), order='F')
+    gen_files(params, part)
+    start = end
+    gc.collect()
+
+
 
 '''
 
