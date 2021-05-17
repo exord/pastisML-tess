@@ -208,7 +208,7 @@ class PlanetParameters(Parameters):
     
     def __init__(self, table_path=os.path.join(pp.TABLE_DIR, 'Hsu', 
                                                'table2.dat'),
-                 rates_column=4, interbindist='flat'):
+                 rates_column=4, interbindist='flat', minradius=None):
         """
         Prepare rates from Hsu+2019 table 2.
 
@@ -220,6 +220,9 @@ class PlanetParameters(Parameters):
 
         :param str interbindist: defines method to sample within bin. Options
         are "flat" or "logflat"
+        
+        :param float or None minradius: minimum radius to consider. If None
+        no limit is included.
         """
         validdist = ['flat', 'logflata']
         
@@ -237,9 +240,14 @@ class PlanetParameters(Parameters):
         self.occ_rate_table = dd.loc[dd.loc[:, 4] != "<"]
     
         # Get occurrence rate in numpy format to use as weights
-        self.rates = self.occ_rate_table.loc[:, 
-                                             self.rates_column].to_numpy().\
-            astype('float')
+        self.rates_orig = self.occ_rate_table.loc[:, self.rates_column].\
+            to_numpy().astype('float')
+            
+        if minradius is not None:
+            min_rad_cond = self.occ_rate_table.loc[:, 2] >= minradius
+            self.rates = np.where(min_rad_cond, self.rates_orig, 0)
+        else:
+            self.rates = self.rates_orig
         
         self.w = self.rates/self.rates.sum()
         
@@ -294,8 +302,8 @@ class PlanetParameters(Parameters):
         
         A = self.occ_rate_table.iloc[i, [0, 1, 2, 3]].to_numpy()
                 
-        deltap = A[:, 0] - A[:, 1]
-        deltar = A[:, 2] - A[:, 3]
+        deltap = A[:, 1] - A[:, 0]
+        deltar = A[:, 3] - A[:, 2]
         
         # Sample randomly within bin
         u = np.random.rand(size, 2)
@@ -345,7 +353,9 @@ class PlanetParameters(Parameters):
         
         # Eccentricity
         if eccentric:
-            self.ecc = np.abs(np.random.randn(size) * 0.3)
+            ecc_prior = priors.TruncatedUNormalPrior(0., 0.3, 0., 1.)
+            self.ecc = ecc_prior.rvs(size)
+            #Eself.ecc = np.abs(np.random.randn(size) * 0.3)
             self.omega_rad = np.random.rand(size) * 2 * np.pi
             
         else:
