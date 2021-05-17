@@ -7,3 +7,6 @@ Created on Fri May  7 17:34:03 2021
 """
 SCENARIO = 'PLA'
 NSIMU_PER_TIC_STAR = 1
+
+# Directory with tables
+TABLE_DIR = 'tables/'

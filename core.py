@@ -16,8 +16,7 @@ import pandas as pd
 from pastis.priors import moduleprior as mp
 from pastis.MCMC import priors
 
-homedir = os.getenv('HOME')
-mldir = os.path.join(homedir, 'EXOML', 'TESS-pastis')
+import parameters as pp
 
 
 class Parameters(object):
@@ -207,7 +206,8 @@ class TargetStarParameters(Parameters):
 class PlanetParameters(Parameters):
     """class of realistic parameters for the planet scenario."""
     
-    def __init__(self, table_path=os.path.join(mldir, 'Hsu', 'table2.dat'),
+    def __init__(self, table_path=os.path.join(pp.TABLE_DIR, 'Hsu', 
+                                               'table2.dat'),
                  rates_column=4, interbindist='flat'):
         """
         Prepare rates from Hsu+2019 table 2.
@@ -558,7 +558,7 @@ class OrbitParameters(Parameters):
         if self.type == 'planet':
             self.draw_orbit(size, thetamin_deg=60.0)
         elif self.type == 'binary':
-            self.draw_orbit(size, thetamin_deg=0.0)
+            self.draw_orbit(size, thetamin_deg=50.0)
         else:
             raise ValueError('Unknown object type')
         return

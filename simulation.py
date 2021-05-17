@@ -27,7 +27,8 @@ def build_objects(input_dict, nsimu):
     # Iterate over number of simulations
     for i in range(nsimu):
         
-        print(i)
+        if i%100 == 0:
+            print(i)
         # Iterate over objects
         for obj in input_dict:
             dd[obj] = {}
