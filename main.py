@@ -21,7 +21,7 @@ from parameters import SCENARIO, NSIMU_PER_TIC_STAR
 #to force garbage collection
 import gc
 
-def gen_files(params, part_num):
+def gen_files(params, part_num, pd_tess):
     # Draw parameters for scenario
     input_dict = d.draw_parameters(params, SCENARIO, nsimu=NSIMU_PER_TIC_STAR)
     
@@ -47,8 +47,15 @@ def gen_files(params, part_num):
         #TODO hay una forma de hacer mejor esto? es horrible
         pos_elem = np.where(periods_dict==lc[simu_number][1])[0][0]
         
-        #acá recibiriamos otra lista con los id? para matchear con cada entrada del input_dict
         for obj in input_dict:
+            if obj == 'Target1':
+                teff_obj= input_dict[obj]['teff'][pos_elem]
+                logg_obj= input_dict[obj]['logg'][pos_elem]
+            
+                #aprendiendo pandas a los golpes :P
+                id_obj = pd_tess[(pd_tess['Teff'] == teff_obj) & (pd_tess['logg'] == logg_obj)]['ID'].head(1).to_numpy()[0]
+                out_file_line.append(("ID",id_obj))
+
             pd = input_dict[obj]
             for par in pd:
                 if isinstance(pd[par], (np.ndarray, np.generic) ): 
@@ -102,20 +109,11 @@ import simulation as s
 
 
 print("Reading input files")
-tess_TEFF_LOGG_MH_filename = "tic_dec30_00S__28_00S_ID_TEFF_LOGG_MH.csv"
+tess_ID_TEFF_LOGG_MH_filename = "tic_dec30_00S__28_00S_ID_TEFF_LOGG_MH.csv"
 tess_MH_filename = "tic_dec30_00S__28_00S_ID_MH.csv"
 
-TEFF_LOGG_MH = pd.read_csv(tess_TEFF_LOGG_MH_filename)
-TEFF_LOGG_MH = TEFF_LOGG_MH[['Teff','logg','MH']].to_numpy()
-
-### si se va a crear otro arreglo con el ID
-'''
-TEFF_LOGG_MH = TEFF_LOGG_MH[['ID','Teff','logg','MH']].to_numpy()
-
-Y la parte de params deberia quedar
-params = TEFF_LOGG_MH_slice.flatten().reshape(4, len(TEFF_LOGG_MH_slice), order='F')
-'''
-
+pd_ID_TEFF_LOGG_MH = pd.read_csv(tess_ID_TEFF_LOGG_MH_filename )
+TEFF_LOGG_MH = pd_ID_TEFF_LOGG_MH[['Teff','logg','MH']].to_numpy()
 
 MH = pd.read_csv(tess_MH_filename)
 MH = MH['MH'].to_numpy()
@@ -125,14 +123,15 @@ for a in TEFF_LOGG_MH:
     if np.isnan(a[2]):
         a[2] = np.random.choice(MH)
 
-#para partir en batch de 5k estrellas, enumero las particioes también
+#para partir en batch de masomenos 5k estrellas, enumero las particiones también
 start = 0
-for part, end in enumerate(np.linspace(5000, len(TEFF_LOGG_MH), 16, dtype=int)):
-    print (start, end, "Part:", part)
-    TEFF_LOGG_MH_slice = TEFF_LOGG_MH[start:end]
-    #para usar el mismo formato que habia antes
-    params = TEFF_LOGG_MH_slice.flatten().reshape(3, len(TEFF_LOGG_MH_slice), order='F')
-    gen_files(params, part)
+for part, end in enumerate(np.linspace(10000, len(TEFF_LOGG_MH), 16, dtype=int)):
+    if part>=0: #para cuando se cortaba 
+        print (start, end, "Part:", part)
+        TEFF_LOGG_MH_slice = TEFF_LOGG_MH[start:end]
+        #para usar el mismo formato que habia antes
+        params = TEFF_LOGG_MH_slice.flatten().reshape(3, len(TEFF_LOGG_MH_slice), order='F')
+        gen_files(params, part, pd_ID_TEFF_LOGG_MH)
     start = end
     gc.collect()
 
