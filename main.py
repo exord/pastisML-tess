@@ -33,13 +33,16 @@ def gen_files(params, part_num, pd_tess):
     
     # Save index and simulations
     
-    out_file = open("./simulations/lightcurves-index-"+str(part_num)+".txt", "w")
+    out_file = open("./simulations/"+SCENARIO+"-lightcurves-index-"+str(part_num)+".txt", "w")
     
     #periods candidate
     if SCENARIO=='BEB':
         periods_dict = input_dict['IsoBinary1']['P']
-    #if SCENARIO=='PLA':
-    
+    elif SCENARIO=='PLA':
+        planet_key = input_dict['PlanSys1']['planet1']
+        periods_dict = input_dict[planet_key]['P']
+
+
     for simu_number in range(len(lc)):
         out_file_line=[]
       
@@ -50,8 +53,7 @@ def gen_files(params, part_num, pd_tess):
         for obj in input_dict:
             if obj == 'Target1':
                 teff_obj= input_dict[obj]['teff'][pos_elem]
-                logg_obj= input_dict[obj]['logg'][pos_elem]
-            
+                logg_obj= input_dict[obj]['logg'][pos_elem]           
                 #aprendiendo pandas a los golpes :P
                 id_obj = pd_tess[(pd_tess['Teff'] == teff_obj) & (pd_tess['logg'] == logg_obj)]['ID'].head(1).to_numpy()[0]
                 out_file_line.append(("ID",id_obj))
@@ -60,11 +62,11 @@ def gen_files(params, part_num, pd_tess):
             for par in pd:
                 if isinstance(pd[par], (np.ndarray, np.generic) ): 
                     out_file_line.append((par,pd[par][pos_elem]))
-                else: #e.g. istar1:Blend1
+                else: #e.g. istar1:Blend1, 'star1': 'Target1', planet1': 'Planet1'
                     out_file_line.append((par,pd[par]))
                     
         #save simulation and values            
-        simu_name = './simulations/simu-'+str(part_num)+"-"+str(simu_number)+'.csv'   
+        simu_name = './simulations/'+SCENARIO+'-simu-'+str(part_num)+"-"+str(simu_number)+'.csv'   
         print("Saving slice:",part_num, "simulation:", simu_number)
         np.savetxt(simu_name, lc[simu_number][0], delimiter=',') #as np array
     
@@ -132,6 +134,7 @@ for part, end in enumerate(np.linspace(10000, len(TEFF_LOGG_MH), 16, dtype=int))
         #para usar el mismo formato que habia antes
         params = TEFF_LOGG_MH_slice.flatten().reshape(3, len(TEFF_LOGG_MH_slice), order='F')
         gen_files(params, part, pd_ID_TEFF_LOGG_MH)
+        break
     start = end
     gc.collect()
 

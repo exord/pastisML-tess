@@ -10,7 +10,7 @@ import numpy as np
 from pastis import ObjectBuilder as ob
 from pastis.models import PHOT
 from pastis.exceptions import EvolTrackError, EBOPparamError
-
+import pickle
 
 def build_objects(input_dict, nsimu):
     """
@@ -100,8 +100,10 @@ def lightcurves(object_list, scenario='PLA', lc_cadence_min=2.0):
         # define number of points according to period and cadence
         n_points = np.int(np.ceil(P * 24 * 60 / lc_cadence_min))
         tt = np.linspace(0, 1, n_points)
-        
         try:
+            pickle.dump( objs[0], open( "obj.p", "wb" ) )
+#            print("LOGG:", objs[0].star.logg)
+#            print("TEFF:", objs[0].star.teff)            
             lci = PHOT.PASTIS_PHOT(tt, 'TESS', 
                                    True, 0.0, 1.0, 0.0, *objs)
         except EBOPparamError as ex:
