@@ -1,19 +1,20 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-Created on Wed Feb 17 17:23:07 2021
+This module contains functions to randomly draw FP or planet system parameters.
 
-Module with functions to randomly draw parameters for given transit scenario 
-FP or planetary.
+Created on Wed Feb 17 17:23:07 2021
 
 @author: rodrigo
 """
+# -*- coding: utf-8 -*-
+
 import os
-# import numpy as np
+import numpy as np
 # import pandas as pd
 
 import core as c
+import constants as cts
 import parameters as p
+import utils as u
 
 homedir = os.getenv('HOME')
 mldir = os.path.join(homedir, 'EXOML', 'TESS-pastis')
@@ -39,30 +40,35 @@ def draw_parameters(params, scenario, nsimu=1, **kwargs):
     
     # Draw parameters and return input dict for pastis
     if scenario in ['PLA', 'planet']:
-        pla_params = _draw_parameters_pla(ticstar, **kwargs)
+        planet = _draw_parameters_pla(ticstar, **kwargs)
+        
+        # Flag non-transiting planets
+        flag_transit = conservative_transit_flag([ticstar, planet])
         
         # Construct planet dict for pastis        
-        # planetdict = pla_params[-1].to_pastis()
         # Add tree-like structure
         planetdict = {'star1': 'Target1', 'planet1': 'Planet1'}
-        # planetdict['P'] = pla_params[0].period
 
-        input_dict = {'Target1': ticstar.to_pastis(),
-                      'Planet1': pla_params.to_pastis(),
+        input_dict = {'Target1': ticstar.to_pastis(flag_transit),
+                      'Planet1': planet.to_pastis(flag_transit),
                       'PlanSys1': planetdict}        
         
     elif scenario in ['BEB', 'beb']:
         beb_params = _draw_parameters_beb(ticstar, **kwargs)
         
+        # Flag non-transiting planets
+        flag_eclipse = conservative_transit_flag(beb_params)
+
         # Construct binary dict for pastis
-        binarydict = beb_params[-1].to_pastis()
+        binarydict = beb_params[-1].to_pastis(flag_eclipse)
         # Add tree-like structure
         binarydict.update({'star1': 'Blend1', 'star2': 'Blend2'})
-        binarydict['P'] = beb_params[1].period
         
-        input_dict = {'Target1': ticstar.to_pastis(),
-                      'Blend1': beb_params[0].to_pastis(),
-                      'Blend2': beb_params[1].to_pastis(),
+        #binarydict['P'] = beb_params[1].period
+        
+        input_dict = {'Target1': ticstar.to_pastis(flag_eclipse),
+                      'Blend1': beb_params[0].to_pastis(flag_eclipse),
+                      'Blend2': beb_params[1].to_pastis(flag_eclipse),
                       'IsoBinary1': binarydict
                       }
     
@@ -102,3 +108,69 @@ def _draw_parameters_beb(ticstar, **kwargs):
     
     return [bkg_primary, bkg_secondary, orbit]
     
+
+def conservative_transit_flag(params):
+    """
+    Flag systems according to whether they transit or not.
+    
+    Use a conservative approach when selecting stellar masses and radii.
+    The objective at this point is performing a cut without having to buld the
+    actual pastis objects.
+    
+    :param (Parameter class) params: instance of the parameter Class
+    """
+    # Check which class input belongs to.
+    # Target + planet
+    if (isinstance(params[0], c.TargetStarParameters) and 
+        isinstance(params[1], c.PlanetParameters)):
+            #do something planety
+            print('Checking parameters for planetary system')
+            
+            # Get masses
+            mass2 = params[1].mass * cts.GMearth / cts.GMsun
+            radius2_au = params[1].radius * cts.Rearth / cts.au
+            
+            # To be concervative, choose the smallest reasonable mass
+            # and the largest possible radius
+            # This will make the planet orbit closer to a larger star
+            mass1 = 0.1
+            radius1_au = 10.0 * cts.Rsun / cts.au
+
+            # Define object containing orbital parameters
+            orbit_params = params[1]
+            
+    # background star + secondary
+    elif (isinstance(params[0], c.BackgroundStarParameters) and 
+          isinstance(params[1], c.SecondaryStarParameters)):
+            # do something BEB
+            print('Checking parameters for BEB system')
+            
+            assert len(params) > 2, "Missing parameter object for the orbit"
+            
+            # Get masses
+            mass1 = params[0].mass
+            mass2 = params[1].mass
+            
+            # Get radii
+            # Again, to be conservative, choose LARGE radius
+            radius1_au = 10.0 * cts.Rsun / cts.au
+            radius2_au = 10.0 * cts.Rsun / cts.au
+            
+            # Define object containing orbital parameters
+            orbit_params = params[2]
+
+    # Get relevant orbital parameters
+    periods = orbit_params.period
+    ecc = orbit_params.ecc
+    omega_deg = orbit_params.omega_deg
+    incl_rad = orbit_params.incl_rad
+
+    # Compute separation at inferior conjunction
+    sma_au = u.sma(periods, mass1, mass2)
+    r0 = u.r_infconj(ecc, omega_deg, sma_au / radius1_au)
+
+    # compute impact parameter
+    b = r0 * np.cos(incl_rad)
+         
+    # Return condition of transit
+    return b <= 1 + radius2_au/radius1_au

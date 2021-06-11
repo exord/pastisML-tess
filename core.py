@@ -32,12 +32,22 @@ class Parameters(object):
                                   'sub-class basis')
         
         
-    def to_pastis(self):
-        """Prepare dictionary to pass to pastis."""
+    def to_pastis(self, mask=None):
+        """
+        Prepare dictionary to pass to pastis.
+        
+        An array having the same length as the parameters can be drawn
+        to keep only certain elements. This is used for transit fitting.
+        """
         assert self.draw, "Parameters not drawn. Use .draw method first."
+        
+        if mask is None:        
+            pdict = dict([[par[-1], getattr(self, par[0])] for 
+                          par in self.parnames.values()])
             
-        pdict = dict([[par[-1], getattr(self, par[0])] for 
-                      par in self.parnames.values()])
+        else:
+            pdict = dict([[par[-1], getattr(self, par[0])[mask]] for 
+                          par in self.parnames.values()])
             
         return pdict
     
@@ -116,10 +126,10 @@ class TargetStarParameters(Parameters):
         return
     
     
-    def to_pastis(self):
+    def to_pastis(self, *args):
         """Prepare dictionary to pass to PASTIS."""
         # Prepare first set of parameters
-        pdict = super().to_pastis()
+        pdict = super().to_pastis(*args)
 
         pdict.update({'B': self.feh * 0.0})
             
@@ -281,13 +291,13 @@ class PlanetParameters(Parameters):
         return        
         
     
-    def to_pastis(self):
+    def to_pastis(self, *args):
         """
         Prepare dictionary to pass to PASTIS.
         
         A number of unit transformations are needed to achieve this.
         """
-        pdict = super().to_pastis()
+        pdict = super().to_pastis(*args)
         
         # pass omega and incl to degrees, as required in pastis            
         for angle in ['omega', 'incl']:
@@ -342,7 +352,7 @@ class PlanetParameters(Parameters):
         return
 
 
-    def draw_orbit(self, size=1, thetamin_deg=60.0, eccentric=True):
+    def draw_orbit(self, size=1, thetamin_deg=50.0, eccentric=True):
         """Draw orbital parameters, except period."""
         # Random inclination between thetamin and 90.0 deg
         k = np.cos(thetamin_deg * np.pi/180.0)
@@ -356,12 +366,15 @@ class PlanetParameters(Parameters):
             ecc_prior = priors.TruncatedUNormalPrior(0., 0.3, 0., 1.)
             self.ecc = ecc_prior.rvs(size)
             #Eself.ecc = np.abs(np.random.randn(size) * 0.3)
-            self.omega_rad = np.random.rand(size) * 2 * np.pi
+            self.omega_rad = np.random.rand(size) * 2 * np.pi  
             
         else:
             self.ecc = np.array([0]*size)
             self.omega_rad = np.array([0]*size)
-            
+
+        # For future convenience, define omega in deg.
+        self.omega_deg = self.omega_rad * 180.0 / np.pi
+        
         return
     
     
@@ -507,17 +520,18 @@ class SecondaryStarParameters(BackgroundStarParameters):
         return
         
         
-    def draw_period(self, size):
-        """
-        Draw period from the distribution by Raghavan et al. (2010; fig. 13).
-        
-        Beware! I was unable to reproduce this plot based on their published
-        tables. From now on, it is a leap of faith.
-        """
-        self.log_period = np.random.randn(size) * 2.28 + 5.03
-        self.period = np.exp(self.log_period)
-        return
-        
+# =============================================================================
+#     def draw_period(self, size):
+#         """
+#         Draw period from the distribution by Raghavan et al. (2010; fig. 13).
+#         
+#         Beware! I was unable to reproduce this plot based on their published
+#         tables. From now on, it is a leap of faith.
+#         """
+#         self.log_period = np.random.randn(size) * 2.28 + 5.03
+#         self.period = np.exp(self.log_period)
+#         return
+# =============================================================================
         
     def draw(self):
         """Draw all parameters. Convenience function."""
@@ -534,7 +548,7 @@ class SecondaryStarParameters(BackgroundStarParameters):
         self.mass = self.primary.mass * self.q
         
         # raw period parameters
-        self.draw_period(size)
+        # self.draw_period(size)
         
         return
         
@@ -555,6 +569,7 @@ class OrbitParameters(Parameters):
                          'orb_omega': ['omega_rad', 'rad', 'omega'],
                          'orb_incl': ['incl_rad', 'rad', 'incl'],
                          'orb_phtr': ['ph_tr', '', 'T0'],
+                         'orb_period': ['period', 'P'],
                          }
         
     
@@ -566,22 +581,27 @@ class OrbitParameters(Parameters):
         orbit.
         """
         if self.type == 'planet':
-            self.draw_orbit(size, thetamin_deg=60.0)
-        elif self.type == 'binary':
             self.draw_orbit(size, thetamin_deg=50.0)
+        elif self.type == 'binary':
+            
+            self.log_period = np.random.randn(size) * 2.28 + 5.03
+            self.period = np.exp(self.log_period)
+            
+            self.draw_angles_phase(size, thetamin_deg=50.0)
+            
         else:
             raise ValueError('Unknown object type')
         return
         
     
-    def to_pastis(self):
+    def to_pastis(self, *args):
         """
         Specific version of to_pastis for orbits.
         
         Pastis requires angles in degrees, so transformation is
         necessary.
         """
-        pdict = super().to_pastis()
+        pdict = super().to_pastis(*args)
         
         # pass omega and incl to degrees, as required in pastis
         for angle in ['omega', 'incl']:
@@ -590,8 +610,8 @@ class OrbitParameters(Parameters):
         return pdict
     
     
-    def draw_orbit(self, size=1, thetamin_deg=60.0, eccentric=True):
-        """Draw orbital parameters, except period."""
+    def draw_angles_phase(self, size=1, thetamin_deg=60.0, eccentric=True):
+        """Draw orbital angles and phase."""
         # Random inclination between thetamin and 90.0 deg
         k = np.cos(thetamin_deg * np.pi/180.0)
         self.incl_rad = np.arccos(k * (1 - np.random.rand(size)))
@@ -609,6 +629,9 @@ class OrbitParameters(Parameters):
             self.ecc = np.array([0]*size)
             self.omega_rad = np.array([0]*size)
             
+        # For future convenience, define omega in deg.
+        self.omega_deg = self.omega_rad * 180.0 / np.pi
+
         return
 
 
