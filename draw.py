@@ -127,8 +127,8 @@ def conservative_transit_flag(params):
             print('Checking parameters for planetary system')
             
             # Get masses
-            mass2 = params[1].mass * cts.GMearth / cts.GMsun
-            radius2_au = params[1].radius * cts.Rearth / cts.au
+            mass2 = params[1].mass_mearth * cts.GMearth / cts.GMsun
+            radius2_au = params[1].radius_rearth * cts.Rearth / cts.au
             
             # To be concervative, choose the smallest reasonable mass
             # and the largest possible radius

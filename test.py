@@ -33,7 +33,7 @@ len(params)
 # =============================================================================
 #sma, b, flag = d.conservative_transit_flag([pri, sec, orb])
 
-input_dict = d.draw_parameters(params, 'BEB')
+input_dict = d.draw_parameters(params, 'PLA')
 
 
 # =============================================================================

@@ -8,11 +8,16 @@ Created on Fri May  7 16:53:49 2021
 import numpy as np
 
 from pastis import ObjectBuilder as ob
+from pastis import AstroClasses as ac
 from pastis.models import PHOT
 from pastis.exceptions import EvolTrackError, EBOPparamError
 import pickle
 
-def build_objects(input_dict, nsimu):
+import constants as cts
+import utils as u
+import parameters as p
+
+def build_objects(input_dict, nsimu, return_rejected_stats):
     """
     Build pastis objects.
     
@@ -24,6 +29,11 @@ def build_objects(input_dict, nsimu):
     # Intialise list with objects (use list instead of array 
     # because constructions may fail)
     objs = []
+    
+    rejected = {'inclination': 0,
+                'brightness': 0,
+                'isochrone': 0}
+    
     # Iterate over number of simulations
     for i in range(nsimu):
         
@@ -69,14 +79,106 @@ def build_objects(input_dict, nsimu):
                     
         # Construct objects with full parameter
         try:
-            objs.append(ob.ObjectBuilder(dd))
+            system = ob.ObjectBuilder(dd)
         except EvolTrackError as ex:
             # If fail in Evolution track interpolation, print error and 
             # continue
             print(ex)
+            rejected['isochrone'] += 1
             continue
+        
+        # Check again for transits, this time using realistic parameters
+        if not check_eclipses(system):
+            print('Not transiting')
+            rejected['inclination'] += 1
 
-    return objs
+            continue
+        
+        # Check system brightness
+        if not check_brightness(system):
+            print('Magnitud difference > {}'.format(p.MAX_MAG_DIFF))
+            rejected['brightness'] += 1            
+            continue
+        
+        objs.append(system)
+    
+    if return_rejected_stats:
+        return objs, rejected
+    else:
+        return objs
+    
+
+def check_eclipses(objects):
+    """Verify if a given system actually eclipses / transits."""
+    # Introspection
+    if isinstance(objects[0], ac.PlanSys) and len(objects)==1:
+        # This is a planet scenario
+        oo = objects[0]
+        
+        mass1 = oo.star.mact
+        radius1_au = oo.star.R * cts.Rsun / cts.au
+        
+        mass2 = oo.planets[0].Mp * cts.GMearth / cts.GMsun
+        radius2_au = oo.planets[0].Rp * cts.Rsun / cts.au
+         
+        orbit_params = oo.planets[0].orbital_parameters
+                
+    elif (np.any([[isinstance(oo, ac.IsoBinary) for oo in objects]]) and 
+          len(objects) == 2):
+        
+        eb = np.array([isinstance(oo, ac.IsoBinary) for oo in objects])
+        oo = np.array(objects)[eb][0]
+
+        # Get masses and radii
+        mass1 = oo.star1.mact
+        radius1_au = oo.star1.R  * cts.Rsun / cts.au
+
+        mass2 = oo.star2.mact
+        radius2_au = oo.star2.R  * cts.Rsun / cts.au
+        
+        orbit_params = oo.orbital_parameters
+        
+    # Get relevant orbital parameters
+    periods = orbit_params.P
+    ecc = orbit_params.ecc
+    omega_deg = orbit_params.omega * 180 / np.pi
+    incl_rad = orbit_params.incl
+
+    # Compute separation at inferior conjunction
+    sma_au = u.sma(periods, mass1, mass2)
+    r0 = u.r_infconj(ecc, omega_deg, sma_au / radius1_au)
+
+    # compute impact parameter
+    b = r0 * np.cos(incl_rad)
+    
+    orbit_params.b = b
+    orbit_params.r0 = r0
+    
+    # Return condition of transit
+    return b <= (1 + radius2_au/radius1_au)
+
+    
+def check_brightness(objects, max_mag_diff=None):
+    """Verify if diluted system is bright enough to produce FP."""
+    # Get max mag diff
+    if max_mag_diff is None:
+        mmd = p.MAX_MAG_DIFF
+    else:
+        mmd = max_mag_diff
+
+    # Introspection
+    if isinstance(objects[0], ac.PlanSys) and len(objects)==1:
+        # This is a planet scenario
+        return True
+    
+    elif (np.any([[isinstance(oo, ac.IsoBinary) for oo in objects]]) and 
+          len(objects) == 2):
+        
+        eb_ = np.array([isinstance(oo, ac.IsoBinary) for oo in objects])
+        eb = np.array(objects)[eb_][0]
+        targ = np.array(objects)[~eb_][0]
+        
+        return eb.get_mag('TESS') - targ.get_mag('TESS') < mmd
     
 
 def lightcurves(object_list, scenario='PLA', lc_cadence_min=2.0):

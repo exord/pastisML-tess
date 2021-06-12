@@ -17,7 +17,7 @@ from pastis.priors import moduleprior as mp
 from pastis.MCMC import priors
 
 import parameters as pp
-
+import constants as cts
 
 class Parameters(object):
     """Global class for paramaters."""
@@ -270,8 +270,8 @@ class PlanetParameters(Parameters):
                          'orb_omega': ['omega_rad', 'rad', 'omega'],
                          'orb_incl': ['incl_rad', 'rad', 'incl'],
                          'orb_phtr': ['ph_tr', '', 'T0'],
-                         'pla_radius': ['radius', 'earth', 'Rp'],
-                         'pla_mass': ['mass', 'earth', 'Mp'],
+                         'pla_radius_rjup': ['radius_rjup', 'jupiter', 'Rp'],
+                         'pla_mass_mjup': ['mass_mjup', 'jupiter', 'Mp'],
                          'pla_albedo': ['albedo', 'albedo']}
         
         for val in self.parnames.values():
@@ -327,7 +327,8 @@ class PlanetParameters(Parameters):
             pass
         
         self.period = p
-        self.radius = r
+        self.radius_rearth = r
+        self.radius_rjup = r * cts.Rearth / cts.Rjup 
             
         return
 
@@ -335,13 +336,14 @@ class PlanetParameters(Parameters):
     def draw_mass(self, size=1):
         """Draw planet mass."""
         try:
-            r = self.radius
+            r = self.radius_rearth
         except AttributeError:
             raise AttributeError('Planet radius not defined; '
                                  'run draw_period_radius first')
         
         # TODO realistic mass-radius relation
-        self.mass = r*0.0 + 1.0
+        self.mass_mearth = r*0.0 + 1.0
+        self.mass_mjup = self.mass_mearth * cts.GMearth / cts.GMjup
         
         return
     

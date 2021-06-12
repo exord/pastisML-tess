@@ -15,3 +15,6 @@ TABLE_DIR = 'tables/'
 
 # Limits on radius
 MIN_PLA_RADIUS = 1.0
+
+# Maximum magnitude difference between target and blended system
+MAX_MAG_DIFF = 8.0
