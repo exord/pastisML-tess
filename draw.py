@@ -44,36 +44,36 @@ def draw_parameters(params, scenario, nsimu=1, **kwargs):
         planet = _draw_parameters_pla(ticstar, **kwargs)
 
         # Flag non-transiting planets
-        flag_transit = conservative_transit_flag([ticstar, planet])
+        flag = conservative_transit_flag([ticstar, planet])
 
         # Construct planet dict for pastis
         # Add tree-like structure
         planetdict = {'star1': 'Target1', 'planet1': 'Planet1'}
 
-        input_dict = {'Target1': ticstar.to_pastis(flag_transit),
-                      'Planet1': planet.to_pastis(flag_transit),
+        input_dict = {'Target1': ticstar.to_pastis(flag),
+                      'Planet1': planet.to_pastis(flag),
                       'PlanSys1': planetdict}
 
     elif scenario in ['BEB', 'beb']:
         beb_params = _draw_parameters_beb(ticstar, **kwargs)
 
         # Flag non-transiting planets
-        flag_eclipse = conservative_transit_flag(beb_params)
+        flag = conservative_transit_flag(beb_params)
 
         # Construct binary dict for pastis
-        binarydict = beb_params[-1].to_pastis(flag_eclipse)
+        binarydict = beb_params[-1].to_pastis(flag)
         # Add tree-like structure
         binarydict.update({'star1': 'Blend1', 'star2': 'Blend2'})
 
         # binarydict['P'] = beb_params[1].period
 
-        input_dict = {'Target1': ticstar.to_pastis(flag_eclipse),
-                      'Blend1': beb_params[0].to_pastis(flag_eclipse),
-                      'Blend2': beb_params[1].to_pastis(flag_eclipse),
+        input_dict = {'Target1': ticstar.to_pastis(flag),
+                      'Blend1': beb_params[0].to_pastis(flag),
+                      'Blend2': beb_params[1].to_pastis(flag),
                       'IsoBinary1': binarydict
                       }
 
-    return input_dict
+    return input_dict, flag
 
 
 def _draw_parameters_pla(ticstar, **kwargs):
