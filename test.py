@@ -40,10 +40,10 @@ logg = np.random.randn(size)*0.01 + 4.4
 params = np.array([teff, logg, feh]).reshape(3, -1, order='F')
 len(params)
 
-SCENARIO = 'BEB'
+SCENARIO = 'PLA'
 
-input_dict = d.draw_parameters(params, SCENARIO)
-object_list, rej = s.build_objects(input_dict, 3000, True)
+input_dict, flag = d.draw_parameters(params, SCENARIO)
+object_list, rej = s.build_objects(input_dict, np.sum(flag), True)
 
 #  Construct light curves
 f = []
