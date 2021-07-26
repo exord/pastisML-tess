@@ -11,10 +11,10 @@ import os
 import numpy as np
 # import pandas as pd
 
-import core as c
-import constants as cts
-import parameters as p
-import utils as u
+from . import core as c
+from . import constants as cts
+from . import parameters as p
+from . import utils as u
 
 homedir = os.getenv('HOME')
 mldir = os.path.join(homedir, 'EXOML', 'TESS-pastis')
@@ -95,7 +95,8 @@ def _draw_parameters_beb(ticstar, **kwargs):
     the pastis object builder.
     """
     # Build primary
-    bkg_primary = c.BackgroundStarParameters(minmass=0.5, maxdist=5)
+    bkg_primary = c.BackgroundStarParameters(ticstar, minmass=0.5,
+                                             maxdist=5)
     # Draw parameters for primary
     bkg_primary.draw(len(ticstar))
 
@@ -123,42 +124,42 @@ def conservative_transit_flag(params):
     # Check which class input belongs to.
     # Target + planet
     if (isinstance(params[0], c.TargetStarParameters) and
-    isinstance(params[1], c.PlanetParameters)):
-            #do something planety
-            print('Checking parameters for planetary system')
+            isinstance(params[1], c.PlanetParameters)):
+        # do something planety
+        print('Checking parameters for planetary system')
 
-            # Get masses
-            mass2 = params[1].mass_mearth * cts.GMearth / cts.GMsun
-            radius2_au = params[1].radius_rearth * cts.Rearth / cts.au
+        # Get masses
+        mass2 = params[1].mass_mearth * cts.GMearth / cts.GMsun
+        radius2_au = params[1].radius_rearth * cts.Rearth / cts.au
 
-            # To be concervative, choose the smallest reasonable mass
-            # and the largest possible radius
-            # This will make the planet orbit closer to a larger star
-            mass1 = 0.1
-            radius1_au = 10.0 * cts.Rsun / cts.au
+        # To be concervative, choose the smallest reasonable mass
+        # and the largest possible radius
+        # This will make the planet orbit closer to a larger star
+        mass1 = 0.1
+        radius1_au = 10.0 * cts.Rsun / cts.au
 
-            # Define object containing orbital parameters
-            orbit_params = params[1]
+        # Define object containing orbital parameters
+        orbit_params = params[1]
 
     # background star + secondary
     elif (isinstance(params[0], c.BackgroundStarParameters) and
           isinstance(params[1], c.SecondaryStarParameters)):
-            # do something BEB
-            print('Checking parameters for BEB system')
+        # do something BEB
+        print('Checking parameters for BEB system')
 
-            assert len(params) > 2, "Missing parameter object for the orbit"
+        assert len(params) > 2, "Missing parameter object for the orbit"
 
-            # Get masses
-            mass1 = params[0].mass
-            mass2 = params[1].mass
+        # Get masses
+        mass1 = params[0].mass
+        mass2 = params[1].mass
 
-            # Get radii
-            # Again, to be conservative, choose LARGE radius
-            radius1_au = 10.0 * cts.Rsun / cts.au
-            radius2_au = 10.0 * cts.Rsun / cts.au
+        # Get radii
+        # Again, to be conservative, choose LARGE radius
+        radius1_au = 10.0 * cts.Rsun / cts.au
+        radius2_au = 10.0 * cts.Rsun / cts.au
 
-            # Define object containing orbital parameters
-            orbit_params = params[2]
+        # Define object containing orbital parameters
+        orbit_params = params[2]
 
     # Get relevant orbital parameters
     periods = orbit_params.period
