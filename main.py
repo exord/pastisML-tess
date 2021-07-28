@@ -23,10 +23,11 @@ import gc
 
 def gen_files(params, part_num, pd_tess):
     # Draw parameters for scenario
-    input_dict = d.draw_parameters(params, SCENARIO, nsimu=NSIMU_PER_TIC_STAR)
+    
+    input_dict, flag = d.draw_parameters(params, SCENARIO, nsimu=NSIMU_PER_TIC_STAR)
         
     # Create objects 
-    object_list = s.build_objects(input_dict, len(params.T))
+    object_list, rej = s.build_objects(input_dict, len(params.T), True)
     
     # Compute model light curves
     lc = s.lightcurves(object_list, scenario=SCENARIO, lc_cadence_min=2.0)
