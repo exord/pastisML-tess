@@ -211,6 +211,10 @@ def lightcurves(object_list, scenario='PLA', lc_cadence_min=2.0):
         except EBOPparamError as ex:
             print(ex)
             continue
+        except AssertionError as ex:
+            print(ex)
+            continue
+
         # append light curve, period and number of points
         f.append([lci, P, n_points])
     return f
