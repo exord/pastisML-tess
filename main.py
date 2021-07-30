@@ -8,12 +8,31 @@ Created on Fri May  7 17:28:29 2021
 import numpy as np
 import pandas as pd
 
-# Import necessary pastis modules and variables
+# Import relevant modules from PASTIS
 from pastis import isochrones, limbdarkening, photometry
-from pastis import extlib, paths
+from pastis.extlib import SAMdict, EMdict
+from pastis.paths import filterpath, zeromagfile
 
-# Import internal modules
-import draw as d
+# Initialise if needed
+if not hasattr(limbdarkening, 'LDCs'):
+    limbdarkening.initialize_limbdarkening(['Johnson-R', 'TESS'])
+
+if not hasattr(photometry, 'Filters'):
+    photometry.initialize_phot(['Johnson-R', 'TESS'], zeromagfile,
+                               filterpath,
+                               AMmodel=SAMdict['BT-settl'])
+    # photometry.initialize_phot_WD()
+if not hasattr(isochrones, 'maxz'):
+    isochrones.interpol_tracks(EMdict['Dartmouth'])
+    isochrones.prepare_tracks_target(EMdict['Dartmouth'])
+
+# import core as c
+
+from . import draw as d
+import parameters as p
+
+# Because pastis is crap, we can only import this after initialisation
+from . import simulation as s
 
 # Read parameters
 from parameters import SCENARIO, NSIMU_PER_TIC_STAR
@@ -27,7 +46,7 @@ def gen_files(params, part_num, pd_tess):
     input_dict, flag = d.draw_parameters(params, SCENARIO, nsimu=NSIMU_PER_TIC_STAR)
         
     # Create objects 
-    object_list, rej = s.build_objects(input_dict, len(params.T), True)
+    object_list, rej = s.build_objects(input_dict, np.sum(flag), True)
     
     # Compute model light curves
     lc = s.lightcurves(object_list, scenario=SCENARIO, lc_cadence_min=2.0)
@@ -85,48 +104,57 @@ def gen_files(params, part_num, pd_tess):
 
 
 
-# Read / Create TIC star parameter list
+# Read TIC star parameter list
+
 ## without real parameters
 # teff = np.random.randn(NSIMU_PER_TIC_STAR)*20 + 5777
 # feh = np.random.randn(NSIMU_PER_TIC_STAR)*0.01
 # logg = np.random.randn(NSIMU_PER_TIC_STAR)*0.01 + 4.4
 
-# nrepeat = 20
-# params = np.array([teff, logg, feh]*nrepeat).reshape(3, nrepeat, order='F')
-
-# Initialise pastis
-
-# Limb darkening coefficients
-limbdarkening.initialize_limbdarkening(['TESS', ])
-
-# Photometric bands
-photometry.initialize_phot(['TESS', ], paths.zeromagfile, paths.filterpath, 
-                           AMmodel=extlib.SAMdict['BT-settl'])
-
-# Stellar tracks and isochrones
-isochrones.interpol_tracks(extlib.EMdict['Dartmouth'])
-isochrones.prepare_tracks_target(extlib.EMdict['Dartmouth'])
-
-# Because pastis is crap, we can only import this after initialisation
-import simulation as s
-
 
 print("Reading input files")
-tess_ID_TEFF_LOGG_MH_filename = "tic_dec30_00S__28_00S_ID_TEFF_LOGG_MH.csv"
-tess_MH_filename = "tic_dec30_00S__28_00S_ID_MH.csv"
+#tess_ID_TEFF_LOGG_MH_filename_0 = "tic_dec30_00S__28_00S_ID_TEFF_LOGG_MH.csv"
+#tess_MH_filename_0 = "tic_dec30_00S__28_00S_ID_MH.csv"
 
-pd_ID_TEFF_LOGG_MH = pd.read_csv(tess_ID_TEFF_LOGG_MH_filename )
-TEFF_LOGG_MH = pd_ID_TEFF_LOGG_MH[['Teff','logg','MH']].to_numpy()
 
-MH = pd.read_csv(tess_MH_filename)
-MH = MH['MH'].to_numpy()
+# just a quick and dirty fix to append two .csv
+
+tess_ID_TEFF_LOGG_MH_filename_0 = "tic_dec66_00S__64_00S_ID_TEFF_LOGG_MH.csv"
+tess_MH_filename_0 = "tic_dec66_00S__64_00S_ID_MH.csv"
+
+
+pd_ID_TEFF_LOGG_MH_0 = pd.read_csv(tess_ID_TEFF_LOGG_MH_filename_0 )
+TEFF_LOGG_MH_0 = pd_ID_TEFF_LOGG_MH_0[['Teff','logg','MH']].to_numpy()
+
+MH_0 = pd.read_csv(tess_MH_filename_0)
+MH_0 = MH_0['MH'].to_numpy()
 
 #debe haber una forma mas numpy para esto
-for a in TEFF_LOGG_MH:
+for a in TEFF_LOGG_MH_0:
     if np.isnan(a[2]):
-        a[2] = np.random.choice(MH)
+        a[2] = np.random.choice(MH_0)
 
-#para partir en batch de masomenos 5k estrellas, enumero las particiones también
+
+tess_ID_TEFF_LOGG_MH_filename_1 = "tic_dec58_00S__56_00S_ID_TEFF_LOGG_MH.csv"
+tess_MH_filename_1 = "tic_dec58_00S__56_00S_ID_MH.csv"
+
+pd_ID_TEFF_LOGG_MH_1 = pd.read_csv(tess_ID_TEFF_LOGG_MH_filename_1 )
+TEFF_LOGG_MH_1 = pd_ID_TEFF_LOGG_MH_1[['Teff','logg','MH']].to_numpy()
+
+MH_1 = pd.read_csv(tess_MH_filename_1)
+MH_1 = MH_1['MH'].to_numpy()
+
+#debe haber una forma mas numpy para esto
+for a in TEFF_LOGG_MH_1:
+    if np.isnan(a[2]):
+        a[2] = np.random.choice(MH_1)
+
+
+TEFF_LOGG_MH = np.concatenate((TEFF_LOGG_MH_0, TEFF_LOGG_MH_1))
+frames = [pd_ID_TEFF_LOGG_MH_0, pd_ID_TEFF_LOGG_MH_1]
+pd_ID_TEFF_LOGG_MH = pd.concat(frames)
+
+#para partir en batch de masomenos 10k estrellas, enumero las particiones también
 start = 0
 for part, end in enumerate(np.linspace(10000, len(TEFF_LOGG_MH), 16, dtype=int)):
     if part>=0: #para cuando se cortaba 
@@ -135,7 +163,7 @@ for part, end in enumerate(np.linspace(10000, len(TEFF_LOGG_MH), 16, dtype=int))
         #para usar el mismo formato que habia antes
         params = TEFF_LOGG_MH_slice.flatten().reshape(3, len(TEFF_LOGG_MH_slice), order='F')
         gen_files(params, part, pd_ID_TEFF_LOGG_MH)
-        break
+        # break
     start = end
     gc.collect()
 
@@ -159,4 +187,3 @@ ipdb> lc[1][1]
 ipdb> lc[2][1]
 6681.425619021072
 '''
-
