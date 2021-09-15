@@ -28,17 +28,18 @@ if not hasattr(isochrones, 'maxz'):
 
 # import core as c
 
-from . import draw as d
+from pastisML_tess import draw as d
 import parameters as p
 
 # Because pastis is crap, we can only import this after initialisation
-from . import simulation as s
+from pastisML_tess import simulation as s
 
 # Read parameters
 from parameters import SCENARIO, NSIMU_PER_TIC_STAR
 
 #to force garbage collection
 import gc
+
 
 def gen_files(params, part_num, pd_tess):
     # Draw parameters for scenario
@@ -51,6 +52,25 @@ def gen_files(params, part_num, pd_tess):
     # Compute model light curves
     lc = s.lightcurves(object_list, scenario=SCENARIO, lc_cadence_min=2.0)
     
+    for obj in object_list:
+        if SCENARIO == 'BEB':
+            # de todas las estrellas: mact, R, L
+            obj[0].star1.mact
+            obj[0].star2.mact
+            obj[0].star1.R
+            obj[0].star2.R
+            
+            obj[1].target.mact
+            obj[1].target.R
+            obj[1].target.L
+            
+        if SCENARIO == 'PLA':
+            obj[0].star.mact
+            obj[0].star.R
+            obj[0].star.L
+            
+        
+            
     # Save index and simulations
     
     out_file = open("./simulations/"+SCENARIO+"-lightcurves-index-"+str(part_num)+".txt", "w")
