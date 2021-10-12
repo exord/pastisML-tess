@@ -111,8 +111,8 @@ def build_objects(input_dict, nsimu, return_rejected_stats):
             else:
                 pass
             
-        except EBOPparamError:
-            print('Encoutered EBOP limit when testing for depth')
+        except (EBOPparamError, AssertionError):
+            print('Encoutered EBOP limit when testing for depth or NaNs')
             rejected['ebop'] += 1
             continue
 
