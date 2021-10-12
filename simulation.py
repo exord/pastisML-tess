@@ -33,7 +33,8 @@ def build_objects(input_dict, nsimu, return_rejected_stats):
 
     rejected = {'inclination': 0,
                 'brightness': 0,
-                'isochrone': 0}
+                'isochrone': 0,
+                'depth': 0}
 
     # Iterate over number of simulations
     for i in range(nsimu):
@@ -98,6 +99,12 @@ def build_objects(input_dict, nsimu, return_rejected_stats):
         if not check_brightness(system):
             print('Magnitud difference > {}'.format(p.MAX_MAG_DIFF))
             rejected['brightness'] += 1
+            # continue
+
+        # Check depth
+        if not check_depth(system, p.MIN_DEPTH):
+            print('Eclipse / transit depth > {}'.format(p.MIN_DEPTH))
+            rejected['depth'] += 1
             # continue
 
         objs.append(system)
@@ -174,13 +181,45 @@ def check_brightness(objects, max_mag_diff=None):
     elif (np.any([[isinstance(oo, ac.IsoBinary) for oo in objects]]) and
           len(objects) == 2):
 
-        eb_ = np.array([isinstance(oo, ac.IsoBinary) for oo in objects])
-        eb = np.array(objects)[eb_][0]
-        targ = np.array(objects)[~eb_][0]
+        eb = getEB(objects)
+        targ = np.array(objects)[~eb][0]
 
         return eb.get_mag('TESS') - targ.get_mag('TESS') < mmd
 
+    
+def check_depth(objects, min_depth=None):
+    """
+    Check that system has eclipses / transits deeper than min_depth.
+    
+    :param float min_depth: minimum depth on part-per-millon. If None take 
+    value from params 
+    """
+    # Get max mag diff
+    if min_depth is None:
+        md = p.MIN_DEPTH
+    else:
+        md = min_depth
 
+    # Evaluate curve at phase 0 (also evaluate at 0.5 to avoid 
+    # PASTIS interpolation; long story...)
+    lci = PHOT.PASTIS_PHOT(np.array([0.0, 0.5]), 'TESS', True, 0.0, 1.0, 0.0, 
+                           *objects)
+    
+    return (1 - lci.flatten()[0]) * 1e6 > md
+
+
+def getEB(objects):
+    """Return the element of the objects list that is an IsoBinary."""
+    eb_ = np.array([isinstance(oo, ac.IsoBinary) for oo in objects])
+    return np.array(objects)[eb_][0]
+
+
+def getTarget(objects):
+    """Return the element of the objects list that is a Target star."""
+    target_ = np.array([isinstance(oo, ac.Target) for oo in objects])
+    return np.array(objects)[target_][0]
+
+    
 def lightcurves(object_list, scenario='PLA', lc_cadence_min=2.0):
     """
     Build PASTIS light curves.

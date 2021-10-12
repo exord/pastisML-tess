@@ -18,3 +18,6 @@ MIN_PLA_RADIUS = 1.0
 
 # Maximum magnitude difference between target and blended system
 MAX_MAG_DIFF = 8.0
+
+# Minimum depth for transit / eclipse
+MIN_DEPTH = 1e-5
