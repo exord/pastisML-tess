@@ -34,7 +34,8 @@ def build_objects(input_dict, nsimu, return_rejected_stats):
     rejected = {'inclination': 0,
                 'brightness': 0,
                 'isochrone': 0,
-                'depth': 0}
+                'depth': 0,
+                'ebop': 0}
 
     # Iterate over number of simulations
     for i in range(nsimu):
@@ -99,13 +100,21 @@ def build_objects(input_dict, nsimu, return_rejected_stats):
         if not check_brightness(system):
             print('Magnitud difference > {}'.format(p.MAX_MAG_DIFF))
             rejected['brightness'] += 1
-            # continue
+            continue
 
         # Check depth
-        if not check_depth(system, p.MIN_DEPTH):
-            print('Eclipse / transit depth > {}'.format(p.MIN_DEPTH))
-            rejected['depth'] += 1
-            # continue
+        try:
+            if not check_depth(system, p.MIN_DEPTH):
+                print('Eclipse / transit depth > {}'.format(p.MIN_DEPTH))
+                rejected['depth'] += 1
+                continue
+            else:
+                pass
+            
+        except EBOPparamError:
+            print('Encoutered EBOP limit when testing for depth')
+            rejected['ebop'] += 1
+            continue
 
         objs.append(system)
 
@@ -182,7 +191,7 @@ def check_brightness(objects, max_mag_diff=None):
           len(objects) == 2):
 
         eb = getEB(objects)
-        targ = np.array(objects)[~eb][0]
+        targ = getTarget(objects)
 
         return eb.get_mag('TESS') - targ.get_mag('TESS') < mmd
 
@@ -203,8 +212,8 @@ def check_depth(objects, min_depth=None):
     # Evaluate curve at phase 0 (also evaluate at 0.5 to avoid 
     # PASTIS interpolation; long story...)
     lci = PHOT.PASTIS_PHOT(np.array([0.0, 0.5]), 'TESS', True, 0.0, 1.0, 0.0, 
-                           *objects)
-    
+                           *objects)        
+
     return (1 - lci.flatten()[0]) * 1e6 > md
 
 
