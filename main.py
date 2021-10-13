@@ -28,14 +28,18 @@ if not hasattr(isochrones, 'maxz'):
 
 # import core as c
 
-from pastisML_tess import draw as d
+#from pastisML_tess import draw as d
+import draw as d
 import parameters as p
 
 # Because pastis is crap, we can only import this after initialisation
-from pastisML_tess import simulation as s
+#from pastisML_tess import simulation as s
+import simulation as s
+
 
 # Read parameters
 from parameters import SCENARIO, NSIMU_PER_TIC_STAR
+#import SCENARIO, NSIMU_PER_TIC_STAR
 
 #to force garbage collection
 import gc
@@ -53,32 +57,15 @@ def gen_files(params, part_num, pd_tess):
     # Compute model light curves
     lc = s.lightcurves(object_list, scenario=SCENARIO, lc_cadence_min=2.0)
     
-    # TODO
-    # Conservar y entregar rej, el diccionario que contiene cuántos sistemas
-    # se cortaron por cada uno de los criterios.
 
-    for obj in object_list:
-        if SCENARIO == 'BEB':
-            # de todas las estrellas: mact, R, L
-            obj[0].star1.mact
-            obj[0].star2.mact
-            obj[0].star1.R
-            obj[0].star2.R
-            
-            obj[1].target.mact
-            obj[1].target.R
-            obj[1].target.L
-            
-        if SCENARIO == 'PLA':
-            obj[0].star.mact
-            obj[0].star.R
-            obj[0].star.L
-            
-            
-    # Save index and simulations
     
     out_file = open("./simulations/"+SCENARIO+"-lightcurves-index-"+str(part_num)+".txt", "w")
-    
+
+    out_file.write("Rejected: \n")
+    out_file.write(str(rej) + "\n" )
+    out_file.write("------------- \n")
+
+      
     #periods candidate
     if SCENARIO=='BEB':
         periods_dict = input_dict['IsoBinary1']['P']
@@ -116,6 +103,24 @@ def gen_files(params, part_num, pd_tess):
     
         for tuple in out_file_line:
                     out_file.write(str(tuple[0]) + " "+ str(tuple[1]) + ",")
+
+        #We search for the object used to create the LC
+
+        obj = object_list[simu_number]
+        
+        if SCENARIO == 'BEB':
+            out_file.write("star1_mact" + " "+ str(obj[0].star1.mact) + ",")
+            out_file.write("star2_mact" + " "+ str(obj[0].star2.mact) + ",")
+            out_file.write("star1_R" + " "+ str(obj[0].star1.R) + ",")
+            out_file.write("star2_R" + " "+ str(obj[0].star2.R) + ",")            
+            out_file.write("target_mact" + " "+ str(obj[1].mact) + ",")            
+            out_file.write("target_R" + " "+ str(obj[1].R) + ",")                    
+            out_file.write("target_L" + " "+ str(obj[1].L) + ",")                                
+            
+        if SCENARIO == 'PLA':
+            out_file.write("star_mact" + " "+ str(obj[0].star.mact) + ",")
+            out_file.write("star_R" + " "+ str(obj[0].star.R) + ",")
+            out_file.write("star_L" + " "+ str(obj[0].star.L) + ",")
                 
         out_file.write(simu_name + "\n")
     out_file.close()

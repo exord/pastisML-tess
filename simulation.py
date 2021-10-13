@@ -13,9 +13,17 @@ from pastis.models import PHOT
 from pastis.exceptions import EvolTrackError, EBOPparamError
 import pickle
 
+'''
 from . import constants as cts
 from . import utils as u
 from . import parameters as p
+'''
+import constants as cts
+import utils as u
+import parameters as p
+
+
+
 
 
 def build_objects(input_dict, nsimu, return_rejected_stats):

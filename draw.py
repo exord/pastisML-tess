@@ -10,11 +10,18 @@ Created on Wed Feb 17 17:23:07 2021
 import os
 import numpy as np
 # import pandas as pd
-
+'''
 from . import core as c
 from . import constants as cts
 from . import parameters as p
 from . import utils as u
+'''
+import core as c
+import constants as cts
+import parameters as p
+import utils as u
+
+
 
 homedir = os.getenv('HOME')
 mldir = os.path.join(homedir, 'EXOML', 'TESS-pastis')

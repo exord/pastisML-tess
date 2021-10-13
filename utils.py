@@ -10,7 +10,8 @@ Created on Fri May 28 17:58:22 2021
 from math import pi
 import numpy as np
 
-from . import constants as cts
+#from . import constants as cts
+import constants as cts
 
 
 def sma(per, m1, m2):

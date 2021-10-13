@@ -16,8 +16,14 @@ import pandas as pd
 from pastis.priors import moduleprior as mp
 from pastis.MCMC import priors
 
+
+'''
 from . import parameters as pp
 from . import constants as cts
+'''
+
+import parameters as pp
+import constants as cts
 
 
 class Parameters(object):
