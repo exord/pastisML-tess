@@ -191,10 +191,12 @@ def check_brightness(objects, max_mag_diff=None):
         mmd = max_mag_diff
 
     # Introspection
+    # Case PLA
     if isinstance(objects[0], ac.PlanSys) and len(objects) == 1:
         # This is a planet scenario
         return True
 
+    # Case BEB
     elif (np.any([[isinstance(oo, ac.IsoBinary) for oo in objects]]) and
           len(objects) == 2):
 
@@ -203,6 +205,12 @@ def check_brightness(objects, max_mag_diff=None):
 
         return eb.get_mag('TESS') - targ.get_mag('TESS') < mmd
 
+    # Case TRIPLE
+    elif isinstance(objects[0], ac.Triple) and len(objects) == 1:
+        #TODO write condition for triple system
+        pass
+        return 
+    
     
 def check_depth(objects, min_depth=None):
     """

@@ -47,7 +47,7 @@ def draw_parameters(params, scenario, nsimu=1, **kwargs):
     ticstar.draw()
 
     # Draw parameters and return input dict for pastis
-    if scenario in ['PLA', 'planet']:
+    if scenario.lower() in ['pla', 'planet']:
         planet = _draw_parameters_pla(ticstar, **kwargs)
 
         # Flag non-transiting planets
@@ -61,7 +61,7 @@ def draw_parameters(params, scenario, nsimu=1, **kwargs):
                       'Planet1': planet.to_pastis(flag),
                       'PlanSys1': planetdict}
 
-    elif scenario in ['BEB', 'beb']:
+    elif scenario.lower() == 'beb':
         beb_params = _draw_parameters_beb(ticstar, **kwargs)
 
         # Flag non-transiting planets
@@ -74,11 +74,45 @@ def draw_parameters(params, scenario, nsimu=1, **kwargs):
 
         # binarydict['P'] = beb_params[1].period
 
+        tripledict = _draw_parameters_boundbinary(ticstar, **kwargs)
+        
+        tripledict.update({'object1': 'Target1',
+                           'object2': 'IsoBinary1'})
+
         input_dict = {'Target1': ticstar.to_pastis(flag),
                       'Blend1': beb_params[0].to_pastis(flag),
                       'Blend2': beb_params[1].to_pastis(flag),
-                      'IsoBinary1': binarydict
+                      'IsoBinary1': binarydict,
+                      'Triple1': tripledict
                       }
+        
+    elif scenario.lower() == 'triple':
+        bbinary_params = _draw_parameters_boundbinary(ticstar, **kwargs)
+        
+        # Flag non-transiting planets
+        flag = conservative_transit_flag(bbinary_params)
+
+        # Construct binary dict for pastis
+        binarydict = bbinary_params[-1].to_pastis(flag)
+        # Add tree-like structure
+        binarydict.update({'star1': 'Blend1', 'star2': 'Blend2'})
+
+        # binarydict['P'] = beb_params[1].period
+        hierch_orbit = c.OrbitParameters(orbittype='triple')
+        hierch_orbit.draw(sum(flag))
+        
+        triple_dict = hierch_orbit.to_pastis()
+        triple_dict.update({'object1': 'Target1', 
+                            'object2': 'IsoBinary1'})
+        
+        
+        input_dict = {'Target1': ticstar.to_pastis(flag),
+                      'Blend1': bbinary_params[0].to_pastis(flag),
+                      'Blend2': bbinary_params[1].to_pastis(flag),
+                      'IsoBinary1': binarydict,
+                      'Triple1': tripledict
+                      }
+        
 
     return input_dict, flag
 
@@ -116,6 +150,29 @@ def _draw_parameters_beb(ticstar, **kwargs):
     orbit.draw(len(ticstar))
 
     return [bkg_primary, bkg_secondary, orbit]
+
+
+def _draw_parameters_boundbinary(ticstar, **kwargs):
+    """
+    Draw parameters for the binary bound to a Target star.
+
+    This is done by drawing a background star and build the binary, much like
+    the pastis object builder.
+    """
+    # Build primary
+    binary_primary = c.BoundPrimaryParameters(ticstar, minmass=0.5)
+    # Draw parameters for primary
+    binary_primary.draw(len(ticstar))
+
+    # Build secondary
+    binary_secondary = c.SecondaryStarParameters(binary_primary)
+    binary_secondary.draw()
+
+    # Draw orbit
+    orbit = c.OrbitParameters(orbittype='binary')
+    orbit.draw(len(ticstar))
+
+    return [binary_primary, binary_secondary, orbit]
 
 
 def conservative_transit_flag(params):

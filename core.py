@@ -382,10 +382,10 @@ class PlanetParameters(Parameters):
         return
 
 
-class BackgroundStarParameters(Parameters):
-    """Class with realistic parameters for background stars."""
-
-    def __init__(self, foreground, maxdist=1000, minmass=0.05, *args):
+class BlendedStarParameters(Parameters):
+    """General class for stars blended by a Target star."""
+ 
+    def __init__(self, foreground, minmass=0.05, *args):
         """
         Instatiate class.
 
@@ -397,13 +397,11 @@ class BackgroundStarParameters(Parameters):
         Parameters could include galactic direction, redenning, etc.
         """
         self.foreground = foreground
-        self.maxdist = maxdist
         self.minmass = minmass
 
         self.parnames = {'Mass': ['mass', 'Solar mass', 'minit'],
                          'Age': ['logage', 'Gyr [log]', 'logage'],
                          'Metallicity': ['feh', '', 'z'],
-                         'Distance': ['distance', 'pc', 'dist'],
                          'Albedo': ['albedo', '', 'albedo'],
                          'Redenning': ['ebmv', '', 'ebmv']
                          }
@@ -491,6 +489,119 @@ class BackgroundStarParameters(Parameters):
         return
 
 
+class BackgroundStarParameters(BlendedStarParameters):
+    """Class with realistic parameters for background stars."""
+
+    def __init__(self, foreground, maxdist=1000, minmass=0.05, *args):
+        """
+        Instatiate class.
+
+        :param TargetStar foreground: star in the foreground
+        :param float maxdist: maximum distance [in pc] at which a background
+        star is allowed to be located.
+        :param float minmass: minimum mass allowed for background stars.
+
+        Parameters could include galactic direction, redenning, etc.
+        """
+        
+        super.__init__(self, foreground, minmass=minmass)
+        
+        # Add information related to distance behind target star
+        self.maxdist = maxdist
+        self.parnames.update({'Distance': ['distance', 'pc', 'dist'],})
+        
+        return
+
+    def draw(self, size):
+        """Draw all parameters. Convenience function."""
+        for d in ['mass', 'logage', 'feh', 'distance', 'albedo', 'redenning']:
+            to_run = getattr(self, 'draw_{}'.format(d))
+            # Run draw
+            to_run(size)
+
+        self.drawn = 1
+
+        return
+
+    def draw_mass(self, size=1):
+        """
+        Draw mass of background star.
+
+        Use IMF from Robin+2003
+        """
+        # Parameters from Robin+2003
+        alpha = 1.6
+        beta = 3.0
+        m0 = 1.0
+
+        amax = m0**(1 - alpha) / (1 - alpha)
+        amin = self.minmass**(1 - alpha) / (1 - alpha)
+
+        # bmax = self.maxmass**(1 - beta) / (1 - beta)
+        bmin = m0**(1 - beta) / (1 - beta)
+
+        # Integral over whole range
+        # k = amax - amin + bmax - bmin
+        k = amax - amin - bmin
+
+        # Limit quantiles
+        q0 = (amax - amin)/k
+
+        # Random quantile draws
+        q = np.random.rand(size)
+
+        # Inverse CDF in the two regimes
+        xalpha = ((q*k + amin) * (1 - alpha)) ** (1 / (1 - alpha))
+        xbeta = ((q*k - (amax - amin) + bmin) * (1 - beta)) ** (1 / (1 - beta))
+
+        # Assign depending on value of q
+        self.mass = np.where(q < q0, xalpha, xbeta)
+
+        return
+
+    def draw_logage(self, size=1):
+        """Draw logarithm (base 10) of age in Gyr."""
+        self.logage = np.random.rand(size)*4 + 6
+        return
+
+    def draw_feh(self, size=1):
+        """Draw Fe/H metallicity."""
+        self.feh = np.random.rand(size) * 3 - 2.5
+        return
+
+    def draw_albedo(self, size=1):
+        """Draw Fe/H metallicity."""
+        self.albedo = stellar_albedo(size)
+        return
+
+    def draw_distance(self, size=1):
+        """Draw distance of background star (from target star)."""
+        # TODO consider foreground stars.
+        self.distance = np.random.rand(size)**(1./3.) * self.maxdist
+        # Add distance to foreground star
+        self.distance += self.foreground.dist
+        return
+
+    def draw_redenning(self, size=1):
+        """
+        Draw value of redenning, E(B-V).
+
+        NOTE: until further notice this just returns 0.
+        """
+        self.ebmv = np.zeros(size)
+        return
+
+
+class PrimaryBkgParameters(BackgroundStarParameters):
+    """Class for parameters of primary background star."""
+
+    def __init__(self, foreground, maxdist=1000, minmass=0.05):
+        
+        super().__init__(foreground, maxist=maxdist,
+                         minmass=minmass)
+        return
+             
+        
 class SecondaryStarParameters(BackgroundStarParameters):
     """Class for parameters of secondary background star."""
 
@@ -498,7 +609,8 @@ class SecondaryStarParameters(BackgroundStarParameters):
 
         assert primarystar.drawn, "Undrawn primary star parameters. Abort."
 
-        super().__init__(primarystar.foreground, maxdist=primarystar.maxdist,
+        super().__init__(primarystar.foreground, 
+                         maxdist=primarystar.maxdist,
                          minmass=primarystar.minmass)
 
         self.primary = primarystar
@@ -555,12 +667,120 @@ class SecondaryStarParameters(BackgroundStarParameters):
         return
 
 
+class BoundPrimaryParameters(Parameters):
+    """Class with realistic parameters for background stars."""
+
+    def __init__(self, foreground, minmass=0.05, *args):
+        """
+        Instatiate class.
+
+        :param TargetStar foreground: primary star in hierarchichal triple
+        :param float minmass: minimum mass allowed for binary components.
+
+        Parameters could include galactic direction, redenning, etc.
+        """
+        self.foreground = foreground
+        self.minmass = minmass
+
+        self.parnames = {'Mass': ['mass', 'Solar mass', 'minit'],
+                         'Age': ['logage', 'Gyr [log]', 'logage'],
+                         'Metallicity': ['feh', '', 'z'],
+                         'Distance': ['distance', 'pc', 'dist'],
+                         'Albedo': ['albedo', '', 'albedo'],
+                         'Redenning': ['ebmv', '', 'ebmv']
+                         }
+        self.drawn = 0
+
+        return
+
+    def draw(self, size):
+        """Draw all parameters. Convenience function."""
+        for d in ['mass', 'feh', 'distance', 'albedo', 'redenning']:
+            to_run = getattr(self, 'draw_{}'.format(d))
+            # Run draw
+            to_run(size)
+
+        self.drawn = 1
+
+        return
+
+    def draw_mass(self, size=1):
+        """
+        Draw mass of background star.
+
+        Use IMF from Robin+2003
+        """
+        #TODO change to something more clever (tokovinin or Raghavan)
+        
+        # Parameters from Robin+2003
+        alpha = 1.6
+        beta = 3.0
+        m0 = 1.0
+
+        amax = m0**(1 - alpha) / (1 - alpha)
+        amin = self.minmass**(1 - alpha) / (1 - alpha)
+
+        # bmax = self.maxmass**(1 - beta) / (1 - beta)
+        bmin = m0**(1 - beta) / (1 - beta)
+
+        # Integral over whole range
+        # k = amax - amin + bmax - bmin
+        k = amax - amin - bmin
+
+        # Limit quantiles
+        q0 = (amax - amin)/k
+
+        # Random quantile draws
+        q = np.random.rand(size)
+
+        # Inverse CDF in the two regimes
+        xalpha = ((q*k + amin) * (1 - alpha)) ** (1 / (1 - alpha))
+        xbeta = ((q*k - (amax - amin) + bmin) * (1 - beta)) ** (1 / (1 - beta))
+
+        # Assign depending on value of q
+        self.mass = np.where(q < q0, xalpha, xbeta)
+
+        return
+
+# =============================================================================
+#     def draw_logage(self, size=1):
+#         """Use age of target star for primary."""
+#         self.logage = self.foreground.logage
+#         return
+# 
+# =============================================================================
+    
+    def draw_feh(self, size=1):
+        """Use Fe/H from target star."""
+        self.feh = self.foreground.feh
+        return
+
+    def draw_albedo(self, size=1):
+        """Draw Fe/H metallicity."""
+        self.albedo = stellar_albedo(size)
+        return
+
+    def draw_distance(self, size=1):
+        """Use distance from target star."""
+        self.distance = self.foreground.dist
+        return
+
+    def draw_redenning(self, size=1):
+        """
+        Draw value of redenning, E(B-V).
+
+        NOTE: until further notice this just returns 0.
+        """
+        self.ebmv = np.zeros(size)
+        return
+
+
 class OrbitParameters(Parameters):
     """Class of orbital parameters (except periods)."""
 
     def __init__(self, orbittype='planet'):
 
-        valid_types = ['planet', 'binary']
+        valid_types = ['planet', 'binary', 'triple']
 
         assert orbittype in valid_types, \
             ("orbittype must be \'{}\'".format('\' or \''.join(valid_types)))
@@ -583,13 +803,20 @@ class OrbitParameters(Parameters):
         """
         if self.type == 'planet':
             self.draw_orbit(size, thetamin_deg=50.0)
+
         elif self.type == 'binary':
 
             self.log_period = np.random.randn(size) * 2.28 + 5.03
             self.period = np.exp(self.log_period)
 
             self.draw_angles_phase(size, thetamin_deg=50.0)
+            
+        elif self.type == 'triple':
+            self.period = np.full(size, 10000.0)
+            self.log_period = np.log(self.period)
 
+            self.draw_angles_phase(size, thetamin_deg=0.0)            
+            
         else:
             raise ValueError('Unknown object type')
         return
