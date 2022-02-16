@@ -409,6 +409,10 @@ class BlendedStarParameters(Parameters):
 
         return
 
+    def __len__(self):
+        """Len method."""
+        return len(self.foreground)
+    
     def draw(self, size):
         """Draw all parameters. Convenience function."""
         for d in ['mass', 'logage', 'feh', 'distance', 'albedo', 'redenning']:
@@ -503,7 +507,7 @@ class BackgroundStarParameters(BlendedStarParameters):
         Parameters could include galactic direction, redenning, etc.
         """
         
-        super.__init__(self, foreground, minmass=minmass)
+        super().__init__(foreground, minmass=minmass)
         
         # Add information related to distance behind target star
         self.maxdist = maxdist
