@@ -472,12 +472,9 @@ class BlendedStarParameters(Parameters):
         return
 
     def draw_distance(self, size=1):
-        """Draw distance of background star (from target star)."""
-        # TODO consider foreground stars.
-        self.distance = np.random.rand(size)**(1./3.) * self.maxdist
-        # Add distance to foreground star
-        self.distance += self.foreground.dist
-        return
+        """Draw distance of blended star (with respecto to target star)."""
+        raise NotImplementedError('draw_distance method must be implented '
+                                  'by subclass')
 
     def draw_redenning(self, size=1):
         """
@@ -489,6 +486,8 @@ class BlendedStarParameters(Parameters):
         return
 
 
+# TODO Clean up; most methods are identically to BlendedStarParameters
+# Leave draw_distance
 class BackgroundStarParameters(BlendedStarParameters):
     """Class with realistic parameters for background stars."""
 
@@ -602,20 +601,19 @@ class PrimaryBkgParameters(BackgroundStarParameters):
         return
              
         
-class SecondaryStarParameters(BackgroundStarParameters):
+class SecondaryStarParameters(BlendedStarParameters):
     """Class for parameters of secondary background star."""
 
     def __init__(self, primarystar):
 
         assert primarystar.drawn, "Undrawn primary star parameters. Abort."
 
-        super().__init__(primarystar.foreground, 
-                         maxdist=primarystar.maxdist,
-                         minmass=primarystar.minmass)
-
         self.primary = primarystar
 
+        super().__init__(primarystar, minmass=primarystar.minmass)
+        
         return
+
 
     def draw_q(self, size):
         """
@@ -633,40 +631,38 @@ class SecondaryStarParameters(BackgroundStarParameters):
         return
 
 
-# =============================================================================
-#     def draw_period(self, size):
-#         """
-#         Draw period from the distribution by Raghavan et al. (2010; fig. 13).
-#
-#         Beware! I was unable to reproduce this plot based on their published
-#         tables. From now on, it is a leap of faith.
-#         """
-#         self.log_period = np.random.randn(size) * 2.28 + 5.03
-#         self.period = np.exp(self.log_period)
-#         return
-# =============================================================================
-
-
-    def draw(self):
-        """Draw all parameters. Convenience function."""
+    def draw_mass(self, size):
+        """Draw mass based on mass ratio and primary mass."""
         size = len(self.primary.mass)
-
+        
         # Draw q
         if not hasattr(self, 'q'):
             self.draw_q(size)
-
-        # Draw parameters using parent method.
-        super().draw(size)
-
-        # Modify mass; pastis object builder will take care of the rest
+            
         self.mass = self.primary.mass * self.q
+        return
+      
+    
+    def draw(self):
+        """Draw all parameters. Convenience function."""
+        for d in ['mass', 'albedo', 'redenning']:
+            to_run = getattr(self, 'draw_{}'.format(d))
+            # Run draw
+            to_run(len(self.primary))
 
-        # raw period parameters
-        # self.draw_period(size)
+        # Copy specific attributes from primary star
+        # This may be redundant as PASTIS takes care of this anyway
+        for inherited_par in ['logage', 'feh']:
+            setattr(self, inherited_par, getattr(self.primary, inherited_par))
+            
+        # Distance from primary
+        self.distance = self.primary.distance * 0.0 
+        
+        self.drawn = 1
 
         return
-
-
+    
+    
 class BoundPrimaryParameters(Parameters):
     """Class with realistic parameters for background stars."""
 
@@ -693,12 +689,20 @@ class BoundPrimaryParameters(Parameters):
 
         return
 
+    def __len__(self):
+        """Len method."""
+        return len(self.foreground)
+
     def draw(self, size):
         """Draw all parameters. Convenience function."""
-        for d in ['mass', 'feh', 'distance', 'albedo', 'redenning']:
+        for d in ['mass', 'feh', 'logage', 'distance', 'albedo', 'redenning']:
             to_run = getattr(self, 'draw_{}'.format(d))
             # Run draw
             to_run(size)
+       
+        # Distance from foreground
+        # TODO check DISTANCES! Are they relative to target or not!?
+        # self.distance = self.foreground.distance * 0.0 
 
         self.drawn = 1
 
@@ -753,6 +757,16 @@ class BoundPrimaryParameters(Parameters):
     def draw_feh(self, size=1):
         """Use Fe/H from target star."""
         self.feh = self.foreground.feh
+        return
+
+    def draw_logage(self, size=1):
+        """Use logage from target star."""
+        try:
+            self.logage = self.foreground.logage
+        except AttributeError:
+            # It does not really matter what age we assign at this point
+            # PASTIS will correct this later
+            self.logage = np.array([4,]*len(self.foreground))
         return
 
     def draw_albedo(self, size=1):

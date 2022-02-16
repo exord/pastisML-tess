@@ -73,17 +73,10 @@ def draw_parameters(params, scenario, nsimu=1, **kwargs):
         binarydict.update({'star1': 'Blend1', 'star2': 'Blend2'})
 
         # binarydict['P'] = beb_params[1].period
-
-        tripledict = _draw_parameters_boundbinary(ticstar, **kwargs)
-        
-        tripledict.update({'object1': 'Target1',
-                           'object2': 'IsoBinary1'})
-
         input_dict = {'Target1': ticstar.to_pastis(flag),
                       'Blend1': beb_params[0].to_pastis(flag),
                       'Blend2': beb_params[1].to_pastis(flag),
                       'IsoBinary1': binarydict,
-                      'Triple1': tripledict
                       }
         
     elif scenario.lower() == 'triple':
@@ -101,9 +94,9 @@ def draw_parameters(params, scenario, nsimu=1, **kwargs):
         hierch_orbit = c.OrbitParameters(orbittype='triple')
         hierch_orbit.draw(sum(flag))
         
-        triple_dict = hierch_orbit.to_pastis()
-        triple_dict.update({'object1': 'Target1', 
-                            'object2': 'IsoBinary1'})
+        tripledict = hierch_orbit.to_pastis()
+        tripledict.update({'object1': 'Target1', 
+                           'object2': 'IsoBinary1'})
         
         
         input_dict = {'Target1': ticstar.to_pastis(flag),
@@ -113,6 +106,29 @@ def draw_parameters(params, scenario, nsimu=1, **kwargs):
                       'Triple1': tripledict
                       }
         
+    elif scenario.lower() == 'eb':
+        # Draw parameters for secondary
+        # need to add attribute to Target star
+        ticstar.minmass = 0.0
+        secondary_params = _draw_parameters_secondary(ticstar, **kwargs)
+        
+        # Build full binary
+        eb_params = [ticstar, *secondary_params]
+        
+        # Flag non-transiting binaries
+        flag = conservative_transit_flag(eb_params)
+
+        # Construct binary dict for pastis
+        binarydict = eb_params.to_pastis(flag)
+        
+        # Add tree-like structure
+        binarydict.update({'star1': 'Target1', 'star2': 'Blend2'})
+
+        # binarydict['P'] = beb_params[1].period
+        input_dict = {'Target1': ticstar.to_pastis(flag),
+                      'Blend2': eb_params[1].to_pastis(flag),
+                      'IsoBinary1': binarydict,
+                      }
 
     return input_dict, flag
 
@@ -138,6 +154,8 @@ def _draw_parameters_beb(ticstar, **kwargs):
     # Build primary
     bkg_primary = c.BackgroundStarParameters(ticstar, minmass=0.5,
                                              maxdist=5)
+    # TODO: this could be replace with PrimaryBkgParameters (should be the same)
+    
     # Draw parameters for primary
     bkg_primary.draw(len(ticstar))
 
@@ -175,6 +193,20 @@ def _draw_parameters_boundbinary(ticstar, **kwargs):
     return [binary_primary, binary_secondary, orbit]
 
 
+def _draw_parameters_secondary(ticstar, **kwargs):
+    """
+    Draw parameters for a secondary star bound to the main target star.
+    """
+    binary_secondary = c.SecondaryStarParameters(ticstar)
+    binary_secondary.draw()
+    
+    # Draw orbit
+    orbit = c.OrbitParameters(orbittype='binary')
+    orbit.draw(len(ticstar))
+
+    return [binary_secondary, orbit]
+    
+    
 def conservative_transit_flag(params):
     """
     Flag systems according to whether they transit or not.
@@ -225,6 +257,26 @@ def conservative_transit_flag(params):
         # Define object containing orbital parameters
         orbit_params = params[2]
 
+    elif (isinstance(params[0], c.BoundPrimaryParameters) and
+          isinstance(params[1], c.SecondaryStarParameters)):
+        # do something triple
+        print('Checking parameters for Triple system')
+
+        assert len(params) > 2, "Missing parameter object for the orbit"
+
+        # Get masses
+        mass1 = params[0].mass
+        mass2 = params[1].mass
+
+        # Get radii
+        # Again, to be conservative, choose LARGE radius
+        radius1_au = 10.0 * cts.Rsun / cts.au
+        radius2_au = 10.0 * cts.Rsun / cts.au
+
+        # Define object containing orbital parameters
+        orbit_params = params[2]
+        
+        
     # Get relevant orbital parameters
     periods = orbit_params.period
     ecc = orbit_params.ecc

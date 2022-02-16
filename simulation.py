@@ -147,12 +147,29 @@ def check_eclipses(objects):
 
         orbit_params = oo.planets[0].orbital_parameters
 
+    # BEB
     elif (np.any([[isinstance(oo, ac.IsoBinary) for oo in objects]]) and
           len(objects) == 2):
 
         eb = np.array([isinstance(oo, ac.IsoBinary) for oo in objects])
         oo = np.array(objects)[eb][0]
 
+        # Get masses and radii
+        mass1 = oo.star1.mact
+        radius1_au = oo.star1.R * cts.Rsun / cts.au
+
+        mass2 = oo.star2.mact
+        radius2_au = oo.star2.R * cts.Rsun / cts.au
+
+        orbit_params = oo.orbital_parameters
+        
+    # TRIPLE CASE   
+    elif isinstance(objects[0], ac.Triple) and len(objects) == 1:
+        
+        # Check eclipse of bounded binary (by convention this is object2)
+        oo = objects[0].object2
+        
+        # TODO this is exactly as above! Reduce this!
         # Get masses and radii
         mass1 = oo.star1.mact
         radius1_au = oo.star1.R * cts.Rsun / cts.au
@@ -207,9 +224,13 @@ def check_brightness(objects, max_mag_diff=None):
 
     # Case TRIPLE
     elif isinstance(objects[0], ac.Triple) and len(objects) == 1:
-        #TODO write condition for triple system
-        pass
-        return 
+        # TODO this is very similar to the above
+        targ = objects[0].object1
+        eb = objects[0].object2
+        
+        # Same condition as above
+        return eb.get_mag('TESS') - targ.get_mag('TESS') < mmd
+        
     
     
 def check_depth(objects, min_depth=None):
