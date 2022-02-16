@@ -57,7 +57,35 @@ class Parameters(object):
         return pdict
 
 
-class TargetStarParameters(Parameters):
+class StarParameters(Parameters):
+    """General class for abstract stars.
+    
+    Only to be used by subclassing.
+    """
+    def __init__(self):
+        self.draw = 0
+        
+    def draw_albedo(self):
+        """Draw albedo of star."""
+        self.albedo = stellar_albedo(len(self))
+        return
+
+    def draw_gravitydarkenning(self):
+        """Draw gravity darkening coefficient."""
+        self.B = np.zeros(len(self))
+        return
+
+    def draw_redenning(self):
+        """
+        Draw value of redenning, E(B-V).
+
+        NOTE: until further notice this just returns 0.
+        """
+        self.ebmv = np.zeros(len(self))
+        return
+
+    
+class TargetStarParameters(StarParameters):
     """class for paeramters of the observed (TIC) target star."""
 
     def __init__(self, params, pbands=['Johnson-R', ], **kwargs):
@@ -114,9 +142,9 @@ class TargetStarParameters(Parameters):
         self.logg = params[1]
         self.feh = params[2]
         try:
-            self.dist = params[3]
+            self.distance = params[3]
         except IndexError:
-            self.dist = params[0]*0.0 + 10.0
+            self.distance = params[0]*0.0 + 10.0
 
         self._param_len = params.shape[1]
 
@@ -175,15 +203,6 @@ class TargetStarParameters(Parameters):
 
         return pdict
 
-    def draw_albedo(self):
-        """Draw albedo of star."""
-        self.albedo = stellar_albedo(len(self))
-        return
-
-    def draw_gravitydarkenning(self):
-        """Draw gravity darkening coefficient."""
-        self.B = np.zeros(len(self))
-        return
 # =============================================================================
 #     def check_pbands(self, pbands):
 #         """Check that all elements in a list of photometric bands is initiated."""
@@ -211,15 +230,6 @@ class TargetStarParameters(Parameters):
 #
 #         return
 # =============================================================================
-
-    def draw_redenning(self):
-        """
-        Draw value of redenning, E(B-V).
-
-        NOTE: until further notice this just returns 0.
-        """
-        self.ebmv = np.zeros(len(self))
-        return
 
 
 class PlanetParameters(Parameters):
@@ -382,7 +392,7 @@ class PlanetParameters(Parameters):
         return
 
 
-class BlendedStarParameters(Parameters):
+class BlendedStarParameters(StarParameters):
     """General class for stars blended by a Target star."""
  
     def __init__(self, foreground, minmass=0.05, *args):
@@ -413,18 +423,18 @@ class BlendedStarParameters(Parameters):
         """Len method."""
         return len(self.foreground)
     
-    def draw(self, size):
+    def draw(self):
         """Draw all parameters. Convenience function."""
         for d in ['mass', 'logage', 'feh', 'distance', 'albedo', 'redenning']:
             to_run = getattr(self, 'draw_{}'.format(d))
             # Run draw
-            to_run(size)
+            to_run()
 
         self.drawn = 1
 
         return
 
-    def draw_mass(self, size=1):
+    def draw_mass(self):
         """
         Draw mass of background star.
 
@@ -449,7 +459,7 @@ class BlendedStarParameters(Parameters):
         q0 = (amax - amin)/k
 
         # Random quantile draws
-        q = np.random.rand(size)
+        q = np.random.rand(len(self))
 
         # Inverse CDF in the two regimes
         xalpha = ((q*k + amin) * (1 - alpha)) ** (1 / (1 - alpha))
@@ -460,34 +470,20 @@ class BlendedStarParameters(Parameters):
 
         return
 
-    def draw_logage(self, size=1):
+    def draw_logage(self):
         """Draw logarithm (base 10) of age in Gyr."""
-        self.logage = np.random.rand(size)*4 + 6
+        self.logage = np.random.rand(len(self))*4 + 6
         return
 
-    def draw_feh(self, size=1):
+    def draw_feh(self):
         """Draw Fe/H metallicity."""
-        self.feh = np.random.rand(size) * 3 - 2.5
+        self.feh = np.random.rand(len(self)) * 3 - 2.5
         return
 
-    def draw_albedo(self, size=1):
-        """Draw Fe/H metallicity."""
-        self.albedo = stellar_albedo(size)
-        return
-
-    def draw_distance(self, size=1):
+    def draw_distance(self):
         """Draw distance of blended star (with respecto to target star)."""
         raise NotImplementedError('draw_distance method must be implented '
                                   'by subclass')
-
-    def draw_redenning(self, size=1):
-        """
-        Draw value of redenning, E(B-V).
-
-        NOTE: until further notice this just returns 0.
-        """
-        self.ebmv = np.zeros(size)
-        return
 
 
 # TODO Clean up; most methods are identically to BlendedStarParameters
@@ -515,18 +511,18 @@ class BackgroundStarParameters(BlendedStarParameters):
         
         return
 
-    def draw(self, size):
+    def draw(self):
         """Draw all parameters. Convenience function."""
         for d in ['mass', 'logage', 'feh', 'distance', 'albedo', 'redenning']:
             to_run = getattr(self, 'draw_{}'.format(d))
             # Run draw
-            to_run(size)
+            to_run()
 
         self.drawn = 1
 
         return
 
-    def draw_mass(self, size=1):
+    def draw_mass(self):
         """
         Draw mass of background star.
 
@@ -551,7 +547,7 @@ class BackgroundStarParameters(BlendedStarParameters):
         q0 = (amax - amin)/k
 
         # Random quantile draws
-        q = np.random.rand(size)
+        q = np.random.rand(len(self))
 
         # Inverse CDF in the two regimes
         xalpha = ((q*k + amin) * (1 - alpha)) ** (1 / (1 - alpha))
@@ -562,36 +558,22 @@ class BackgroundStarParameters(BlendedStarParameters):
 
         return
 
-    def draw_logage(self, size=1):
+    def draw_logage(self):
         """Draw logarithm (base 10) of age in Gyr."""
-        self.logage = np.random.rand(size)*4 + 6
+        self.logage = np.random.rand(len(self))*4 + 6
         return
 
     def draw_feh(self, size=1):
         """Draw Fe/H metallicity."""
-        self.feh = np.random.rand(size) * 3 - 2.5
-        return
-
-    def draw_albedo(self, size=1):
-        """Draw Fe/H metallicity."""
-        self.albedo = stellar_albedo(size)
+        self.feh = np.random.rand(len(self)) * 3 - 2.5
         return
 
     def draw_distance(self, size=1):
         """Draw distance of background star (from target star)."""
         # TODO consider foreground stars.
-        self.distance = np.random.rand(size)**(1./3.) * self.maxdist
+        self.distance = np.random.rand(len(self))**(1./3.) * self.maxdist
         # Add distance to foreground star
-        self.distance += self.foreground.dist
-        return
-
-    def draw_redenning(self, size=1):
-        """
-        Draw value of redenning, E(B-V).
-
-        NOTE: until further notice this just returns 0.
-        """
-        self.ebmv = np.zeros(size)
+        self.distance += self.foreground.distance
         return
 
 
@@ -605,7 +587,7 @@ class PrimaryBkgParameters(BackgroundStarParameters):
         return
              
         
-class SecondaryStarParameters(BlendedStarParameters):
+class SecondaryBkgParameters(BlendedStarParameters):
     """Class for parameters of secondary background star."""
 
     def __init__(self, primarystar):
@@ -619,7 +601,7 @@ class SecondaryStarParameters(BlendedStarParameters):
         return
 
 
-    def draw_q(self, size):
+    def draw_q(self):
         """
         Draw mass ratio.
 
@@ -627,21 +609,21 @@ class SecondaryStarParameters(BlendedStarParameters):
 
         See moduleprior.q_def for more details.
         """
-        self.q = np.empty(size)
+        self.q = np.empty(len(self))
 
         # TODO: awful; try to vectorize function in moduleprior
-        for i in range(size):
+        for i in range(len(self.q)):
             self.q[i] = mp.q_def()
         return
 
 
-    def draw_mass(self, size):
+    def draw_mass(self):
         """Draw mass based on mass ratio and primary mass."""
         size = len(self.primary.mass)
         
         # Draw q
         if not hasattr(self, 'q'):
-            self.draw_q(size)
+            self.draw_q(len(self))
             
         self.mass = self.primary.mass * self.q
         return
@@ -652,7 +634,7 @@ class SecondaryStarParameters(BlendedStarParameters):
         for d in ['mass', 'albedo', 'redenning']:
             to_run = getattr(self, 'draw_{}'.format(d))
             # Run draw
-            to_run(len(self.primary))
+            to_run()
 
         # Copy specific attributes from primary star
         # This may be redundant as PASTIS takes care of this anyway
@@ -667,7 +649,64 @@ class SecondaryStarParameters(BlendedStarParameters):
         return
     
     
-class BoundPrimaryParameters(Parameters):
+class SecondaryStarParameters(StarParameters):
+    """Class for parameters of secondary star bound to target."""
+
+    def __init__(self, primarystar):
+
+        assert primarystar.drawn, "Undrawn primary star parameters. Abort."
+
+        self.primary = primarystar
+
+        self.parnames = {'q': ['mass ratio', '', 'q'],
+                         'Age': ['logage', 'Gyr [log]', 'logage'],
+                         'Metallicity': ['feh', '', 'z'],
+                         'Distance': ['distance', 'pc', 'dist'],
+                         'Albedo': ['albedo', '', 'albedo'],
+                         'Redenning': ['ebmv', '', 'ebmv']
+                         }
+        self.drawn = 0
+        
+        return
+
+    def __len__(self):
+        """Len method."""
+        return len(self.primary)
+    
+    def draw_q(self):
+        """
+        Draw mass ratio.
+
+        Use statistics by Raghavan et al. (2010; their fig. 16, left panel).
+
+        See moduleprior.q_def for more details.
+        """
+        self.q = np.empty(len(self))
+
+        # TODO: awful; try to vectorize function in moduleprior
+        for i in range(len(self)):
+            self.q[i] = mp.q_def()
+        return
+
+    
+    def draw(self):
+        """Draw all parameters. Convenience function."""
+        for d in ['q', 'albedo', 'redenning']:
+            to_run = getattr(self, 'draw_{}'.format(d))
+            # Run draw
+            to_run()
+
+        # Copy specific attributes from primary star
+        # This may be redundant as PASTIS takes care of this anyway
+        for inherited_par in ['feh', 'distance']:
+            setattr(self, inherited_par, getattr(self.primary, inherited_par))
+                    
+        self.drawn = 1
+
+        return
+
+
+class BoundPrimaryParameters(StarParameters):
     """Class with realistic parameters for background stars."""
 
     def __init__(self, foreground, minmass=0.05, *args):
@@ -697,12 +736,12 @@ class BoundPrimaryParameters(Parameters):
         """Len method."""
         return len(self.foreground)
 
-    def draw(self, size):
+    def draw(self):
         """Draw all parameters. Convenience function."""
         for d in ['mass', 'feh', 'logage', 'distance', 'albedo', 'redenning']:
             to_run = getattr(self, 'draw_{}'.format(d))
             # Run draw
-            to_run(size)
+            to_run()
        
         # Distance from foreground
         # TODO check DISTANCES! Are they relative to target or not!?
@@ -712,7 +751,7 @@ class BoundPrimaryParameters(Parameters):
 
         return
 
-    def draw_mass(self, size=1):
+    def draw_mass(self):
         """
         Draw mass of background star.
 
@@ -739,7 +778,7 @@ class BoundPrimaryParameters(Parameters):
         q0 = (amax - amin)/k
 
         # Random quantile draws
-        q = np.random.rand(size)
+        q = np.random.rand(len(self))
 
         # Inverse CDF in the two regimes
         xalpha = ((q*k + amin) * (1 - alpha)) ** (1 / (1 - alpha))
@@ -758,38 +797,24 @@ class BoundPrimaryParameters(Parameters):
 # 
 # =============================================================================
     
-    def draw_feh(self, size=1):
+    def draw_feh(self):
         """Use Fe/H from target star."""
         self.feh = self.foreground.feh
         return
 
-    def draw_logage(self, size=1):
+    def draw_logage(self):
         """Use logage from target star."""
         try:
             self.logage = self.foreground.logage
         except AttributeError:
             # It does not really matter what age we assign at this point
             # PASTIS will correct this later
-            self.logage = np.array([4,]*len(self.foreground))
+            self.logage = np.array([4,]*len(self))
         return
 
-    def draw_albedo(self, size=1):
-        """Draw Fe/H metallicity."""
-        self.albedo = stellar_albedo(size)
-        return
-
-    def draw_distance(self, size=1):
+    def draw_distance(self):
         """Use distance from target star."""
-        self.distance = self.foreground.dist
-        return
-
-    def draw_redenning(self, size=1):
-        """
-        Draw value of redenning, E(B-V).
-
-        NOTE: until further notice this just returns 0.
-        """
-        self.ebmv = np.zeros(size)
+        self.distance = self.foreground.distance
         return
 
 

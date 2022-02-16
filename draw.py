@@ -76,7 +76,7 @@ def draw_parameters(params, scenario, nsimu=1, **kwargs):
         input_dict = {'Target1': ticstar.to_pastis(flag),
                       'Blend1': beb_params[0].to_pastis(flag),
                       'Blend2': beb_params[1].to_pastis(flag),
-                      'IsoBinary1': binarydict,
+                      'qBinary1': binarydict,
                       }
         
     elif scenario.lower() == 'triple':
@@ -160,7 +160,7 @@ def _draw_parameters_beb(ticstar, **kwargs):
     bkg_primary.draw(len(ticstar))
 
     # Build secondary
-    bkg_secondary = c.SecondaryStarParameters(bkg_primary)
+    bkg_secondary = c.SecondaryBkgParameters(bkg_primary)
     bkg_secondary.draw()
 
     # Draw orbit
@@ -183,7 +183,7 @@ def _draw_parameters_boundbinary(ticstar, **kwargs):
     binary_primary.draw(len(ticstar))
 
     # Build secondary
-    binary_secondary = c.SecondaryStarParameters(binary_primary)
+    binary_secondary = c.SecondaryBkgParameters(binary_primary)
     binary_secondary.draw()
 
     # Draw orbit
@@ -197,6 +197,12 @@ def _draw_parameters_secondary(ticstar, **kwargs):
     """
     Draw parameters for a secondary star bound to the main target star.
     """
+    if not ticstar.drawn:
+        ticstar.draw() 
+            
+    # Because SecondaryStarParameters require ticstar to have a mass 
+    # attribute, we will do that...
+    
     binary_secondary = c.SecondaryStarParameters(ticstar)
     binary_secondary.draw()
     
@@ -239,7 +245,7 @@ def conservative_transit_flag(params):
 
     # background star + secondary
     elif (isinstance(params[0], c.BackgroundStarParameters) and
-          isinstance(params[1], c.SecondaryStarParameters)):
+          isinstance(params[1], c.SecondaryBkgParameters)):
         # do something BEB
         print('Checking parameters for BEB system')
 
@@ -258,7 +264,7 @@ def conservative_transit_flag(params):
         orbit_params = params[2]
 
     elif (isinstance(params[0], c.BoundPrimaryParameters) and
-          isinstance(params[1], c.SecondaryStarParameters)):
+          isinstance(params[1], c.SecondaryBkgParameters)):
         # do something triple
         print('Checking parameters for Triple system')
 
@@ -276,7 +282,11 @@ def conservative_transit_flag(params):
         # Define object containing orbital parameters
         orbit_params = params[2]
         
-        
+    # TODO! Write EB condition
+    if (isinstance(params[0], c.TargetStarParameters) and
+            isinstance(params[1], c.SecondaryStarParameters)):
+        pass
+    
     # Get relevant orbital parameters
     periods = orbit_params.period
     ecc = orbit_params.ecc
