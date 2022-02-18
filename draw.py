@@ -79,6 +79,25 @@ def draw_parameters(params, scenario, nsimu=1, **kwargs):
                       'IsoBinary1': binarydict,
                       }
         
+    elif scenario.lower() == 'btp':
+        # First, create planetary system
+        plansys_params = _draw_parameters_bkgplansys(ticstar, **kwargs)
+
+        # Flag non-transiting planets
+        flag = conservative_transit_flag(plansys_params)
+
+        # Construct planetary system dict for pastis
+        plansysdict = plansys_params[-1].to_pastis(flag)
+        # Add tree-like structure
+        plansysdict.update({'star1': 'Blend1', 'planet1': 'Planet1'})
+
+        # binarydict['P'] = beb_params[1].period
+        input_dict = {'Target1': ticstar.to_pastis(flag),
+                      'Blend1': plansys_params[0].to_pastis(flag),
+                      'Planet1': plansys_params[1].to_pastis(flag),
+                      'Plansys1': plansysdict,
+                      }
+
     elif scenario.lower() == 'triple':
         bbinary_params = _draw_parameters_boundbinary(ticstar, **kwargs)
         
@@ -106,6 +125,26 @@ def draw_parameters(params, scenario, nsimu=1, **kwargs):
                       'Triple1': tripledict
                       }
         
+    # TODO FALTA ESTE ESCENARIO MUCHO MEJOR!
+    elif scenario.lower() == 'pib':
+        # First, create planetary system
+        plansys_params = _draw_parameters_boundplansys(ticstar, **kwargs)
+
+        # Flag non-transiting planets
+        flag = conservative_transit_flag(plansys_params)
+
+        # Construct planetary system dict for pastis
+        plansysdict = plansys_params[-1].to_pastis(flag)
+        # Add tree-like structure
+        plansysdict.update({'star1': 'Blend1', 'planet1': 'Planet1'})
+
+        # binarydict['P'] = beb_params[1].period
+        input_dict = {'Target1': ticstar.to_pastis(flag),
+                      'Blend1': plansys_params[0].to_pastis(flag),
+                      'Planet1': plansys_params[1].to_pastis(flag),
+                      'Plansys1': plansysdict,
+                      }
+
     elif scenario.lower() == 'eb':
         # Draw parameters for secondary
         # need to add attribute to Target star
@@ -177,6 +216,30 @@ def _draw_parameters_beb(ticstar, **kwargs):
     return [bkg_primary, bkg_secondary, orbit]
 
 
+def _draw_parameters_bkgplansys(ticstar, **kwargs):
+    """
+    Draw parameters for a planetary system blended to a Target star.
+
+    This is done by drawing a background star and build the system, much like
+    the pastis object builder.
+    """
+    # Build planet host
+    planet_host = c.BackgroundStarParameters(ticstar, minmass=0.5,
+                                             maxdist=5)
+    # Draw parameters for planet host
+    planet_host.draw()
+
+    # Build planet
+    planet = _draw_parameters_pla(planet_host, **kwargs)
+    planet.draw()
+
+    # Draw orbit
+    orbit = c.OrbitParameters(orbittype='planet')
+    orbit.draw(len(ticstar))
+
+    return [planet_host, planet, orbit]
+
+
 def _draw_parameters_boundbinary(ticstar, **kwargs):
     """
     Draw parameters for the binary bound to a Target star.
@@ -198,6 +261,29 @@ def _draw_parameters_boundbinary(ticstar, **kwargs):
     orbit.draw(len(ticstar))
 
     return [binary_primary, binary_secondary, orbit]
+
+
+def _draw_parameters_boundplansys(ticstar, **kwargs):
+    """
+    Draw parameters for a planetary system bound to a Target star.
+
+    This is done by drawing a bound star and build the system, much like
+    the pastis object builder.
+    """
+    # Build planet host
+    planet_host = c.BoundPrimaryParameters(ticstar, minmass=0.5)
+    # Draw parameters for planet host
+    planet_host.draw()
+
+    # Build planet
+    planet = _draw_parameters_pla(planet_host, **kwargs)
+    planet.draw()
+
+    # Draw orbit
+    orbit = c.OrbitParameters(orbittype='planet')
+    orbit.draw(len(ticstar))
+
+    return [planet_host, planet, orbit]
 
 
 def _draw_parameters_secondary(ticstar, **kwargs):
