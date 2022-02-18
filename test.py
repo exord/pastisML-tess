@@ -31,7 +31,7 @@ from pastisML_tess import draw as d
 # import parameters as p
 from pastisML_tess import simulation as s
 
-size = 10
+size = 1000
 
 teff = np.random.randn(size)*20 + 5777
 feh = np.random.randn(size)*0.01
@@ -40,34 +40,41 @@ logg = np.random.randn(size)*0.01 + 4.4
 params = np.array([teff, logg, feh]).reshape(3, -1, order='F')
 len(params)
 
-SCENARIO = 'Triple'
 
-input_dict, flag = d.draw_parameters(params, SCENARIO)
-# =============================================================================
-# object_list, rej = s.build_objects(input_dict, np.sum(flag), True)
-# 
-# #  Construct light curves
-# f = []
-# for obj in object_list:
-#     # Get period from object list
-#     if SCENARIO == 'PLA':
-#         P = obj[0].planets[0].orbital_parameters.P
-#     elif SCENARIO == 'BEB':
-#         P = obj[0].orbital_parameters.P
-# 
-#     # sample according to value of period
-#     tess_cadence_min = 2.0
-#     n_points = np.int(np.ceil(P * 24 * 60 / tess_cadence_min))
-#     tt = np.linspace(0, 1, n_points)
-#     from pastis.models import PHOT
-# 
-#     try:
-#         lci = PHOT.PASTIS_PHOT(tt, 'TESS',
-#                                True, 0.0, 1.0, 0.0, *obj)
-#     except:
-#         continue
-# 
-#     f.append([lci, P, n_points])
-# 
-# 
-# =============================================================================
+scenarios_to_test = ['PLANET', 'BEB', 'TRIPLE', 'EB']
+# scenarios_to_test = ['TRIPLE', 'EB']
+results = {}
+
+for SCENARIO in scenarios_to_test:
+    print('#### {} #####'.format(SCENARIO))
+    input_dict, flag = d.draw_parameters(params, SCENARIO)
+    
+    object_list, rej = s.build_objects(input_dict, np.sum(flag), True)
+    
+    #  Construct light curves
+    f = []
+    for obj in object_list:
+        # Get period from object list
+        if SCENARIO.lower() in ['pla', 'planet']:
+            P = obj[0].planets[0].orbital_parameters.P
+        elif SCENARIO.lower() in ['beb', 'eb']:
+            P = obj[0].orbital_parameters.P
+        elif SCENARIO.lower() == 'triple':
+            P = obj[0].object2.orbital_parameters.P
+        
+        # sample according to value of period
+        tess_cadence_min = 2.0
+        n_points = int(np.ceil(P * 24 * 60 / tess_cadence_min))
+        tt = np.linspace(0, 1, n_points)
+        from pastis.models import PHOT
+    
+        try:
+            lci = PHOT.PASTIS_PHOT(tt, 'TESS',
+                                   True, 0.0, 1.0, 0.0, *obj)
+        except:
+            continue
+    
+        f.append([lci, P, n_points])
+
+    results[SCENARIO] = [object_list, rej, f]
+

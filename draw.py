@@ -76,7 +76,7 @@ def draw_parameters(params, scenario, nsimu=1, **kwargs):
         input_dict = {'Target1': ticstar.to_pastis(flag),
                       'Blend1': beb_params[0].to_pastis(flag),
                       'Blend2': beb_params[1].to_pastis(flag),
-                      'qBinary1': binarydict,
+                      'IsoBinary1': binarydict,
                       }
         
     elif scenario.lower() == 'triple':
@@ -119,15 +119,22 @@ def draw_parameters(params, scenario, nsimu=1, **kwargs):
         flag = conservative_transit_flag(eb_params)
 
         # Construct binary dict for pastis
-        binarydict = eb_params.to_pastis(flag)
+        binarydict = eb_params[-1].to_pastis(flag)
         
+        # Update orbital parameters with values from secondary
+        # This is because the qBinary class in PASTIS is not
+        # written the same way as IsoBinary, for example; only
+        # one star is required here
+        binarydict.update(eb_params[1].to_pastis(flag))
+
         # Add tree-like structure
-        binarydict.update({'star1': 'Target1', 'star2': 'Blend2'})
+        # Only primary required in qBinary
+        binarydict.update({'star1': 'Target1'})#, 'star2': 'Blend2'})
 
         # binarydict['P'] = beb_params[1].period
         input_dict = {'Target1': ticstar.to_pastis(flag),
-                      'Blend2': eb_params[1].to_pastis(flag),
-                      'IsoBinary1': binarydict,
+                    #   'Blend2': eb_params[1].to_pastis(flag),
+                      'qBinary1': binarydict,
                       }
 
     return input_dict, flag
@@ -154,10 +161,10 @@ def _draw_parameters_beb(ticstar, **kwargs):
     # Build primary
     bkg_primary = c.BackgroundStarParameters(ticstar, minmass=0.5,
                                              maxdist=5)
-    # TODO: this could be replace with PrimaryBkgParameters (should be the same)
+    # TODO: this could be replaced with PrimaryBkgParameters (should be the same)
     
     # Draw parameters for primary
-    bkg_primary.draw(len(ticstar))
+    bkg_primary.draw()
 
     # Build secondary
     bkg_secondary = c.SecondaryBkgParameters(bkg_primary)
@@ -180,7 +187,7 @@ def _draw_parameters_boundbinary(ticstar, **kwargs):
     # Build primary
     binary_primary = c.BoundPrimaryParameters(ticstar, minmass=0.5)
     # Draw parameters for primary
-    binary_primary.draw(len(ticstar))
+    binary_primary.draw()
 
     # Build secondary
     binary_secondary = c.SecondaryBkgParameters(binary_primary)
@@ -209,6 +216,8 @@ def _draw_parameters_secondary(ticstar, **kwargs):
     # Draw orbit
     orbit = c.OrbitParameters(orbittype='binary')
     orbit.draw(len(ticstar))
+
+    orbit.q = binary_secondary.q
 
     return [binary_secondary, orbit]
     
@@ -263,6 +272,7 @@ def conservative_transit_flag(params):
         # Define object containing orbital parameters
         orbit_params = params[2]
 
+    # Triple condition
     elif (isinstance(params[0], c.BoundPrimaryParameters) and
           isinstance(params[1], c.SecondaryBkgParameters)):
         # do something triple
@@ -282,10 +292,23 @@ def conservative_transit_flag(params):
         # Define object containing orbital parameters
         orbit_params = params[2]
         
-    # TODO! Write EB condition
-    if (isinstance(params[0], c.TargetStarParameters) and
+    # EB Condition
+    elif (isinstance(params[0], c.TargetStarParameters) and
             isinstance(params[1], c.SecondaryStarParameters)):
-        pass
+
+        # do something triple
+        print('Checking parameters for EB system')
+
+        # To be concervative, choose the smallest reasonable masses
+        # and the largest possible radii
+        # This will make the stars orbit closer and being larger
+        mass1 = 0.1
+        radius1_au = 5.0 * cts.Rsun / cts.au
+        mass2 = 0.1
+        radius2_au = 5.0 * cts.Rsun / cts.au
+
+        # Define object containing orbital parameters            
+        orbit_params = params[2]
     
     # Get relevant orbital parameters
     periods = orbit_params.period

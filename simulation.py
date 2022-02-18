@@ -169,7 +169,21 @@ def check_eclipses(objects):
         # Check eclipse of bounded binary (by convention this is object2)
         oo = objects[0].object2
         
-        # TODO this is exactly as above! Reduce this!
+        # TODO this is exactly as above and below! Reduce this!
+        # Get masses and radii
+        mass1 = oo.star1.mact
+        radius1_au = oo.star1.R * cts.Rsun / cts.au
+
+        mass2 = oo.star2.mact
+        radius2_au = oo.star2.R * cts.Rsun / cts.au
+
+        orbit_params = oo.orbital_parameters
+
+    # EB case
+    elif isinstance(objects[0], ac.qBinary) and len(objects) == 1:
+        
+        oo = objects[0]
+
         # Get masses and radii
         mass1 = oo.star1.mact
         radius1_au = oo.star1.R * cts.Rsun / cts.au
@@ -208,9 +222,10 @@ def check_brightness(objects, max_mag_diff=None):
         mmd = max_mag_diff
 
     # Introspection
-    # Case PLA
-    if isinstance(objects[0], ac.PlanSys) and len(objects) == 1:
-        # This is a planet scenario
+    # Case PLA or EB (i.e. non-diluted scenarios)
+    if (isinstance(objects[0], ac.PlanSys) or isinstance(objects[0], ac.qBinary)) \
+        and len(objects) == 1:
+        # This is a planet or EB scenario
         return True
 
     # Case BEB
@@ -231,7 +246,6 @@ def check_brightness(objects, max_mag_diff=None):
         # Same condition as above
         return eb.get_mag('TESS') - targ.get_mag('TESS') < mmd
         
-    
     
 def check_depth(objects, min_depth=None):
     """

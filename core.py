@@ -59,12 +59,12 @@ class Parameters(object):
 
 class StarParameters(Parameters):
     """General class for abstract stars.
-    
+
     Only to be used by subclassing.
     """
     def __init__(self):
         self.draw = 0
-        
+
     def draw_albedo(self):
         """Draw albedo of star."""
         self.albedo = stellar_albedo(len(self))
@@ -84,7 +84,7 @@ class StarParameters(Parameters):
         self.ebmv = np.zeros(len(self))
         return
 
-    
+
 class TargetStarParameters(StarParameters):
     """class for paeramters of the observed (TIC) target star."""
 
@@ -120,7 +120,7 @@ class TargetStarParameters(StarParameters):
         self.parnames = {'Effective Temperature': ['teff', 'K', 'teff'],
                          'Surface gravity': ['logg', 'cgs [log]', 'logg'],
                          'Metallicity': ['feh', '', 'z'],
-                         'Distance': ['dist', 'pc', 'dist'],
+                         'Distance': ['distance', 'pc', 'dist'],
                          'Albedo': ['albedo', '', 'albedo'],
                          'Redenning': ['ebmv', '', 'ebmv'],
                          'Gravity Darkening': ['B', '', 'B']}
@@ -394,7 +394,7 @@ class PlanetParameters(Parameters):
 
 class BlendedStarParameters(StarParameters):
     """General class for stars blended by a Target star."""
- 
+
     def __init__(self, foreground, minmass=0.05, *args):
         """
         Instatiate class.
@@ -422,7 +422,7 @@ class BlendedStarParameters(StarParameters):
     def __len__(self):
         """Len method."""
         return len(self.foreground)
-    
+
     def draw(self):
         """Draw all parameters. Convenience function."""
         for d in ['mass', 'logage', 'feh', 'distance', 'albedo', 'redenning']:
@@ -502,13 +502,13 @@ class BackgroundStarParameters(BlendedStarParameters):
 
         Parameters could include galactic direction, redenning, etc.
         """
-        
+
         super().__init__(foreground, minmass=minmass)
-        
+
         # Add information related to distance behind target star
         self.maxdist = maxdist
         self.parnames.update({'Distance': ['distance', 'pc', 'dist'],})
-        
+
         return
 
     def draw(self):
@@ -581,12 +581,12 @@ class PrimaryBkgParameters(BackgroundStarParameters):
     """Class for parameters of primary background star."""
 
     def __init__(self, foreground, maxdist=1000, minmass=0.05):
-        
+
         super().__init__(foreground, maxist=maxdist,
                          minmass=minmass)
         return
-             
-        
+
+
 class SecondaryBkgParameters(BlendedStarParameters):
     """Class for parameters of secondary background star."""
 
@@ -597,7 +597,7 @@ class SecondaryBkgParameters(BlendedStarParameters):
         self.primary = primarystar
 
         super().__init__(primarystar, minmass=primarystar.minmass)
-        
+
         return
 
 
@@ -620,15 +620,15 @@ class SecondaryBkgParameters(BlendedStarParameters):
     def draw_mass(self):
         """Draw mass based on mass ratio and primary mass."""
         size = len(self.primary.mass)
-        
+
         # Draw q
         if not hasattr(self, 'q'):
-            self.draw_q(len(self))
-            
+            self.draw_q()
+
         self.mass = self.primary.mass * self.q
         return
-      
-    
+
+
     def draw(self):
         """Draw all parameters. Convenience function."""
         for d in ['mass', 'albedo', 'redenning']:
@@ -637,18 +637,18 @@ class SecondaryBkgParameters(BlendedStarParameters):
             to_run()
 
         # Copy specific attributes from primary star
-        # This may be redundant as PASTIS takes care of this anyway
+        # This is redundant as PASTIS takes care of this anyway
         for inherited_par in ['logage', 'feh']:
             setattr(self, inherited_par, getattr(self.primary, inherited_par))
-            
+
         # Distance from primary
-        self.distance = self.primary.distance * 0.0 
-        
+        self.distance = self.primary.distance * 0.0
+
         self.drawn = 1
 
         return
-    
-    
+
+
 class SecondaryStarParameters(StarParameters):
     """Class for parameters of secondary star bound to target."""
 
@@ -658,21 +658,17 @@ class SecondaryStarParameters(StarParameters):
 
         self.primary = primarystar
 
-        self.parnames = {'q': ['mass ratio', '', 'q'],
-                         'Age': ['logage', 'Gyr [log]', 'logage'],
-                         'Metallicity': ['feh', '', 'z'],
-                         'Distance': ['distance', 'pc', 'dist'],
-                         'Albedo': ['albedo', '', 'albedo'],
-                         'Redenning': ['ebmv', '', 'ebmv']
+        self.parnames = {'q': ['q', '', 'q'],
+                         'Albedo': ['albedo', '', 'albedo2'],
                          }
         self.drawn = 0
-        
+
         return
 
     def __len__(self):
         """Len method."""
         return len(self.primary)
-    
+
     def draw_q(self):
         """
         Draw mass ratio.
@@ -688,19 +684,20 @@ class SecondaryStarParameters(StarParameters):
             self.q[i] = mp.q_def()
         return
 
-    
+
     def draw(self):
         """Draw all parameters. Convenience function."""
-        for d in ['q', 'albedo', 'redenning']:
+        for d in ['q', 'albedo']:
             to_run = getattr(self, 'draw_{}'.format(d))
             # Run draw
             to_run()
 
         # Copy specific attributes from primary star
-        # This may be redundant as PASTIS takes care of this anyway
+        # This is redundant as PASTIS takes care of this anyway
+        """
         for inherited_par in ['feh', 'distance']:
             setattr(self, inherited_par, getattr(self.primary, inherited_par))
-                    
+        """
         self.drawn = 1
 
         return
@@ -742,10 +739,10 @@ class BoundPrimaryParameters(StarParameters):
             to_run = getattr(self, 'draw_{}'.format(d))
             # Run draw
             to_run()
-       
+
         # Distance from foreground
         # TODO check DISTANCES! Are they relative to target or not!?
-        # self.distance = self.foreground.distance * 0.0 
+        # self.distance = self.foreground.distance * 0.0
 
         self.drawn = 1
 
@@ -758,7 +755,7 @@ class BoundPrimaryParameters(StarParameters):
         Use IMF from Robin+2003
         """
         #TODO change to something more clever (tokovinin or Raghavan)
-        
+
         # Parameters from Robin+2003
         alpha = 1.6
         beta = 3.0
@@ -794,9 +791,9 @@ class BoundPrimaryParameters(StarParameters):
 #         """Use age of target star for primary."""
 #         self.logage = self.foreground.logage
 #         return
-# 
+#
 # =============================================================================
-    
+
     def draw_feh(self):
         """Use Fe/H from target star."""
         self.feh = self.foreground.feh
@@ -853,13 +850,13 @@ class OrbitParameters(Parameters):
             self.period = np.exp(self.log_period)
 
             self.draw_angles_phase(size, thetamin_deg=50.0)
-            
+
         elif self.type == 'triple':
             self.period = np.full(size, 10000.0)
             self.log_period = np.log(self.period)
 
-            self.draw_angles_phase(size, thetamin_deg=0.0)            
-            
+            self.draw_angles_phase(size, thetamin_deg=0.0)
+
         else:
             raise ValueError('Unknown object type')
         return
