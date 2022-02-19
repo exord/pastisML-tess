@@ -78,7 +78,7 @@ def draw_parameters(params, scenario, nsimu=1, **kwargs):
                       'Blend2': beb_params[1].to_pastis(flag),
                       'IsoBinary1': binarydict,
                       }
-        
+
     elif scenario.lower() == 'btp':
         # First, create planetary system
         plansys_params = _draw_parameters_bkgplansys(ticstar, **kwargs)
@@ -87,9 +87,7 @@ def draw_parameters(params, scenario, nsimu=1, **kwargs):
         flag = conservative_transit_flag(plansys_params)
 
         # Construct planetary system dict for pastis
-        plansysdict = plansys_params[-1].to_pastis(flag)
-        # Add tree-like structure
-        plansysdict.update({'star1': 'Blend1', 'planet1': 'Planet1'})
+        plansysdict = {'star1': 'Blend1', 'planet1': 'Planet1'}
 
         # binarydict['P'] = beb_params[1].period
         input_dict = {'Target1': ticstar.to_pastis(flag),
@@ -100,7 +98,7 @@ def draw_parameters(params, scenario, nsimu=1, **kwargs):
 
     elif scenario.lower() == 'triple':
         bbinary_params = _draw_parameters_boundbinary(ticstar, **kwargs)
-        
+
         # Flag non-transiting planets
         flag = conservative_transit_flag(bbinary_params)
 
@@ -112,19 +110,19 @@ def draw_parameters(params, scenario, nsimu=1, **kwargs):
         # binarydict['P'] = beb_params[1].period
         hierch_orbit = c.OrbitParameters(orbittype='triple')
         hierch_orbit.draw(sum(flag))
-        
+
         tripledict = hierch_orbit.to_pastis()
-        tripledict.update({'object1': 'Target1', 
+        tripledict.update({'object1': 'Target1',
                            'object2': 'IsoBinary1'})
-        
-        
+
+
         input_dict = {'Target1': ticstar.to_pastis(flag),
                       'Blend1': bbinary_params[0].to_pastis(flag),
                       'Blend2': bbinary_params[1].to_pastis(flag),
                       'IsoBinary1': binarydict,
                       'Triple1': tripledict
                       }
-        
+
     # TODO FALTA ESTE ESCENARIO MUCHO MEJOR!
     elif scenario.lower() == 'pib':
         # First, create planetary system
@@ -150,16 +148,16 @@ def draw_parameters(params, scenario, nsimu=1, **kwargs):
         # need to add attribute to Target star
         ticstar.minmass = 0.0
         secondary_params = _draw_parameters_secondary(ticstar, **kwargs)
-        
+
         # Build full binary
         eb_params = [ticstar, *secondary_params]
-        
+
         # Flag non-transiting binaries
         flag = conservative_transit_flag(eb_params)
 
         # Construct binary dict for pastis
         binarydict = eb_params[-1].to_pastis(flag)
-        
+
         # Update orbital parameters with values from secondary
         # This is because the qBinary class in PASTIS is not
         # written the same way as IsoBinary, for example; only
@@ -201,7 +199,7 @@ def _draw_parameters_beb(ticstar, **kwargs):
     bkg_primary = c.BackgroundStarParameters(ticstar, minmass=0.5,
                                              maxdist=5)
     # TODO: this could be replaced with PrimaryBkgParameters (should be the same)
-    
+
     # Draw parameters for primary
     bkg_primary.draw()
 
@@ -231,13 +229,13 @@ def _draw_parameters_bkgplansys(ticstar, **kwargs):
 
     # Build planet
     planet = _draw_parameters_pla(planet_host, **kwargs)
-    planet.draw()
+    planet.draw(len(planet_host))
 
     # Draw orbit
-    orbit = c.OrbitParameters(orbittype='planet')
-    orbit.draw(len(ticstar))
+    # orbit = c.OrbitParameters(orbittype='planet')
+    # orbit.draw(len(ticstar))
 
-    return [planet_host, planet, orbit]
+    return [planet_host, planet]
 
 
 def _draw_parameters_boundbinary(ticstar, **kwargs):
@@ -291,14 +289,14 @@ def _draw_parameters_secondary(ticstar, **kwargs):
     Draw parameters for a secondary star bound to the main target star.
     """
     if not ticstar.drawn:
-        ticstar.draw() 
-            
-    # Because SecondaryStarParameters require ticstar to have a mass 
+        ticstar.draw()
+
+    # Because SecondaryStarParameters require ticstar to have a mass
     # attribute, we will do that...
-    
+
     binary_secondary = c.SecondaryStarParameters(ticstar)
     binary_secondary.draw()
-    
+
     # Draw orbit
     orbit = c.OrbitParameters(orbittype='binary')
     orbit.draw(len(ticstar))
@@ -306,8 +304,8 @@ def _draw_parameters_secondary(ticstar, **kwargs):
     orbit.q = binary_secondary.q
 
     return [binary_secondary, orbit]
-    
-    
+
+
 def conservative_transit_flag(params):
     """
     Flag systems according to whether they transit or not.
@@ -377,7 +375,7 @@ def conservative_transit_flag(params):
 
         # Define object containing orbital parameters
         orbit_params = params[2]
-        
+
     # EB Condition
     elif (isinstance(params[0], c.TargetStarParameters) and
             isinstance(params[1], c.SecondaryStarParameters)):
@@ -385,7 +383,7 @@ def conservative_transit_flag(params):
         # do something triple
         print('Checking parameters for EB system')
 
-        # To be concervative, choose the smallest reasonable masses
+        # To be conservative, choose the smallest reasonable masses
         # and the largest possible radii
         # This will make the stars orbit closer and being larger
         mass1 = 0.1
@@ -393,9 +391,27 @@ def conservative_transit_flag(params):
         mass2 = 0.1
         radius2_au = 5.0 * cts.Rsun / cts.au
 
-        # Define object containing orbital parameters            
+        # Define object containing orbital parameters
         orbit_params = params[2]
-    
+
+    if (isinstance(params[0], c.BackgroundStarParameters) and
+            isinstance(params[1], c.PlanetParameters)):
+        # do something planety
+        print('Checking parameters for BTP system')
+
+        # Get stellar mass
+        mass1 = params[0].mass
+        # get stellar radius
+        # Again, to be conservative, choose LARGE radius
+        radius1_au = 10.0 * cts.Rsun / cts.au
+        
+        # Get planet mass and orbital distance
+        mass2 = params[1].mass_mearth * cts.GMearth / cts.GMsun
+        radius2_au = params[1].radius_rearth * cts.Rearth / cts.au
+
+        orbit_params = params[1]
+
+
     # Get relevant orbital parameters
     periods = orbit_params.period
     ecc = orbit_params.ecc

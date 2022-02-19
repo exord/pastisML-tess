@@ -163,6 +163,10 @@ def check_eclipses(objects):
 
         orbit_params = oo.orbital_parameters
         
+    # BTP CASE
+    #  elif (np.any):
+
+
     # TRIPLE CASE   
     elif isinstance(objects[0], ac.Triple) and len(objects) == 1:
         

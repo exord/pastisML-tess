@@ -842,6 +842,7 @@ class OrbitParameters(Parameters):
         orbit.
         """
         if self.type == 'planet':
+            #TODO this is not working!
             self.draw_orbit(size, thetamin_deg=50.0)
 
         elif self.type == 'binary':
