@@ -113,7 +113,7 @@ def build_objects(input_dict, nsimu, return_rejected_stats):
         # Check depth
         try:
             if not check_depth(system, p.MIN_DEPTH):
-                print('Eclipse / transit depth > {}'.format(p.MIN_DEPTH))
+                print('Eclipse / transit depth < {}'.format(p.MIN_DEPTH))
                 rejected['depth'] += 1
                 continue
             else:
@@ -148,7 +148,7 @@ def check_eclipses(objects):
         orbit_params = oo.planets[0].orbital_parameters
 
     # BEB
-    elif (np.any([[isinstance(oo, ac.IsoBinary) for oo in objects]]) and
+    elif (np.any([isinstance(oo, ac.IsoBinary) for oo in objects]) and
           len(objects) == 2):
 
         eb = np.array([isinstance(oo, ac.IsoBinary) for oo in objects])
@@ -164,7 +164,20 @@ def check_eclipses(objects):
         orbit_params = oo.orbital_parameters
         
     # BTP CASE
-    #  elif (np.any):
+    elif (len(objects) == 2 and
+          np.any([isinstance(oo, ac.PlanSys) for oo in objects])):
+
+        plansys = np.array([isinstance(oo, ac.PlanSys) for oo in objects])
+        oo = np.array(objects)[plansys][0]
+
+        # Get masses and radii
+        mass1 = oo.star.mact
+        radius1_au = oo.star.R * cts.Rsun / cts.au
+
+        mass2 = oo.planets[0].Mp * cts.GMearth / cts.GMsun
+        radius2_au = oo.planets[0].Rp * cts.Rsun / cts.au
+
+        orbit_params = oo.planets[0].orbital_parameters
 
 
     # TRIPLE CASE   
@@ -233,14 +246,24 @@ def check_brightness(objects, max_mag_diff=None):
         return True
 
     # Case BEB
-    elif (np.any([[isinstance(oo, ac.IsoBinary) for oo in objects]]) and
-          len(objects) == 2):
+    elif (len(objects) == 2 and 
+          np.any([isinstance(oo, ac.IsoBinary) for oo in objects])):
 
         eb = getEB(objects)
         targ = getTarget(objects)
 
-        return eb.get_mag('TESS') - targ.get_mag('TESS') < mmd
+        delta_mag = eb.get_mag('TESS') - targ.get_mag('TESS')
 
+    # Case BTP
+    elif (len(objects) == 2 and 
+          np.any([isinstance(oo, ac.PlanSys) for oo in objects])):
+
+        plansys = getPlanSys(objects)
+        targ = getTarget(objects)
+
+        delta_mag = plansys.star.get_mag('TESS') - targ.get_mag('TESS')
+
+    
     # Case TRIPLE
     elif isinstance(objects[0], ac.Triple) and len(objects) == 1:
         # TODO this is very similar to the above
@@ -248,7 +271,9 @@ def check_brightness(objects, max_mag_diff=None):
         eb = objects[0].object2
         
         # Same condition as above
-        return eb.get_mag('TESS') - targ.get_mag('TESS') < mmd
+        delta_mag = eb.get_mag('TESS') - targ.get_mag('TESS')
+
+    return (delta_mag > 0) and (delta_mag < mmd)
         
     
 def check_depth(objects, min_depth=None):
@@ -283,7 +308,13 @@ def getTarget(objects):
     target_ = np.array([isinstance(oo, ac.Target) for oo in objects])
     return np.array(objects)[target_][0]
 
-    
+
+def getPlanSys(objects):
+    """Return the element of the objects list that is a Target star."""
+    plansys_ = np.array([isinstance(oo, ac.PlanSys) for oo in objects])
+    return np.array(objects)[plansys_][0]
+
+
 def lightcurves(object_list, scenario='PLA', lc_cadence_min=2.0):
     """
     Build PASTIS light curves.

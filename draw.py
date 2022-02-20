@@ -93,7 +93,7 @@ def draw_parameters(params, scenario, nsimu=1, **kwargs):
         input_dict = {'Target1': ticstar.to_pastis(flag),
                       'Blend1': plansys_params[0].to_pastis(flag),
                       'Planet1': plansys_params[1].to_pastis(flag),
-                      'Plansys1': plansysdict,
+                      'PlanSys1': plansysdict,
                       }
 
     elif scenario.lower() == 'triple':

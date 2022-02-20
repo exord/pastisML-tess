@@ -42,7 +42,7 @@ len(params)
 
 
 scenarios_to_test = ['PLANET', 'BEB', 'TRIPLE', 'EB']
-# scenarios_to_test = ['TRIPLE', 'EB']
+scenarios_to_test = ['BTP']
 results = {}
 
 for SCENARIO in scenarios_to_test:
@@ -55,7 +55,7 @@ for SCENARIO in scenarios_to_test:
     f = []
     for obj in object_list:
         # Get period from object list
-        if SCENARIO.lower() in ['pla', 'planet']:
+        if SCENARIO.lower() in ['pla', 'planet', 'btp']:
             P = obj[0].planets[0].orbital_parameters.P
         elif SCENARIO.lower() in ['beb', 'eb']:
             P = obj[0].orbital_parameters.P
@@ -77,4 +77,4 @@ for SCENARIO in scenarios_to_test:
         f.append([lci, P, n_points])
 
     results[SCENARIO] = [object_list, rej, f]
-
+ 
