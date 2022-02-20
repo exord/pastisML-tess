@@ -123,7 +123,6 @@ def draw_parameters(params, scenario, nsimu=1, **kwargs):
                       'Triple1': tripledict
                       }
 
-    # TODO FALTA ESTE ESCENARIO MUCHO MEJOR!
     elif scenario.lower() == 'pib':
         # First, create planetary system
         plansys_params = _draw_parameters_boundplansys(ticstar, **kwargs)
@@ -132,15 +131,23 @@ def draw_parameters(params, scenario, nsimu=1, **kwargs):
         flag = conservative_transit_flag(plansys_params)
 
         # Construct planetary system dict for pastis
-        plansysdict = plansys_params[-1].to_pastis(flag)
-        # Add tree-like structure
-        plansysdict.update({'star1': 'Blend1', 'planet1': 'Planet1'})
+        plansysdict = {'star1': 'Blend1', 'planet1': 'Planet1'}
+
+        # Draw orbital parameters for triple
+        hierch_orbit = c.OrbitParameters(orbittype='triple')
+        hierch_orbit.draw(sum(flag))
+        
+        # Construct dictionary of hierarchichal orbit
+        tripledict = hierch_orbit.to_pastis()
+        tripledict.update({'object1': 'Target1',
+                           'object2': 'PlanSys1'})
 
         # binarydict['P'] = beb_params[1].period
         input_dict = {'Target1': ticstar.to_pastis(flag),
                       'Blend1': plansys_params[0].to_pastis(flag),
                       'Planet1': plansys_params[1].to_pastis(flag),
-                      'Plansys1': plansysdict,
+                      'PlanSys1': plansysdict,
+                      'Triple1': tripledict
                       }
 
     elif scenario.lower() == 'eb':
@@ -275,13 +282,13 @@ def _draw_parameters_boundplansys(ticstar, **kwargs):
 
     # Build planet
     planet = _draw_parameters_pla(planet_host, **kwargs)
-    planet.draw()
+    planet.draw(len(planet_host))
 
     # Draw orbit
-    orbit = c.OrbitParameters(orbittype='planet')
-    orbit.draw(len(ticstar))
+    # orbit = c.OrbitParameters(orbittype='planet')
+    # orbit.draw(len(ticstar))
 
-    return [planet_host, planet, orbit]
+    return [planet_host, planet]
 
 
 def _draw_parameters_secondary(ticstar, **kwargs):
@@ -316,7 +323,9 @@ def conservative_transit_flag(params):
 
     :param (Parameter class) params: instance of the parameter Class
     """
+    #TODO merge as many if conditions as possible
     # Check which class input belongs to.
+    
     # Target + planet
     if (isinstance(params[0], c.TargetStarParameters) and
             isinstance(params[1], c.PlanetParameters)):
@@ -336,7 +345,7 @@ def conservative_transit_flag(params):
         # Define object containing orbital parameters
         orbit_params = params[1]
 
-    # background star + secondary
+    # background star + secondary (BEB)
     elif (isinstance(params[0], c.BackgroundStarParameters) and
           isinstance(params[1], c.SecondaryBkgParameters)):
         # do something BEB
@@ -376,6 +385,25 @@ def conservative_transit_flag(params):
         # Define object containing orbital parameters
         orbit_params = params[2]
 
+    # PIB condition
+    elif (isinstance(params[0], c.BoundPrimaryParameters) and
+          isinstance(params[1], c.PlanetParameters)):
+        
+        # do something planety
+        print('Checking parameters for PiB system')
+
+        # Get stellar mass
+        mass1 = params[0].mass
+        # get stellar radius
+        # Again, to be conservative, choose LARGE radius
+        radius1_au = 10.0 * cts.Rsun / cts.au
+        
+        # Get planet mass and orbital distance
+        mass2 = params[1].mass_mearth * cts.GMearth / cts.GMsun
+        radius2_au = params[1].radius_rearth * cts.Rearth / cts.au
+
+        orbit_params = params[1]        
+
     # EB Condition
     elif (isinstance(params[0], c.TargetStarParameters) and
             isinstance(params[1], c.SecondaryStarParameters)):
@@ -394,8 +422,9 @@ def conservative_transit_flag(params):
         # Define object containing orbital parameters
         orbit_params = params[2]
 
-    if (isinstance(params[0], c.BackgroundStarParameters) and
-            isinstance(params[1], c.PlanetParameters)):
+    # BTP condition
+    elif (isinstance(params[0], c.BackgroundStarParameters) and
+          isinstance(params[1], c.PlanetParameters)):
         # do something planety
         print('Checking parameters for BTP system')
 
@@ -410,7 +439,6 @@ def conservative_transit_flag(params):
         radius2_au = params[1].radius_rearth * cts.Rearth / cts.au
 
         orbit_params = params[1]
-
 
     # Get relevant orbital parameters
     periods = orbit_params.period

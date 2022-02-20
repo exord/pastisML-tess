@@ -786,14 +786,6 @@ class BoundPrimaryParameters(StarParameters):
 
         return
 
-# =============================================================================
-#     def draw_logage(self, size=1):
-#         """Use age of target star for primary."""
-#         self.logage = self.foreground.logage
-#         return
-#
-# =============================================================================
-
     def draw_feh(self):
         """Use Fe/H from target star."""
         self.feh = self.foreground.feh
@@ -853,6 +845,8 @@ class OrbitParameters(Parameters):
             self.draw_angles_phase(size, thetamin_deg=50.0)
 
         elif self.type == 'triple':
+            # Very long period, does not really affect as long
+            # as much longer than shorter period in triple
             self.period = np.full(size, 10000.0)
             self.log_period = np.log(self.period)
 
