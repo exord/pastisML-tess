@@ -134,81 +134,69 @@ def build_objects(input_dict, nsimu, return_rejected_stats):
 
 def check_eclipses(objects):
     """Verify if a given system actually eclipses / transits."""
+    
     # Introspection
-    if isinstance(objects[0], ac.PlanSys) and len(objects) == 1:
-        # This is a planet scenario
-        oo = objects[0]
 
-        mass1 = oo.star.mact
-        radius1_au = oo.star.R * cts.Rsun / cts.au
-
-        mass2 = oo.planets[0].Mp * cts.GMearth / cts.GMsun
-        radius2_au = oo.planets[0].Rp * cts.Rsun / cts.au
-
-        orbit_params = oo.planets[0].orbital_parameters
-
-    # BEB
-    elif (np.any([isinstance(oo, ac.IsoBinary) for oo in objects]) and
-          len(objects) == 2):
-
-        eb = np.array([isinstance(oo, ac.IsoBinary) for oo in objects])
-        oo = np.array(objects)[eb][0]
-
-        # Get masses and radii
-        mass1 = oo.star1.mact
-        radius1_au = oo.star1.R * cts.Rsun / cts.au
-
-        mass2 = oo.star2.mact
-        radius2_au = oo.star2.R * cts.Rsun / cts.au
-
-        orbit_params = oo.orbital_parameters
+    # SINGLE OBJECT (UNDILUTED / BOUND) SCENARIOS
+    if len(objects) == 1:
         
-    # BTP CASE
-    elif (len(objects) == 2 and
-          np.any([isinstance(oo, ac.PlanSys) for oo in objects])):
+        if isinstance(objects[0], ac.PlanSys):
+            oo = objects[0]
+            primary = oo.star
+            secondary = oo.planets[0]
+            orbit_params = secondary.orbital_parameters
 
-        plansys = np.array([isinstance(oo, ac.PlanSys) for oo in objects])
-        oo = np.array(objects)[plansys][0]
+        # EB system
+        elif isinstance(objects[0], ac.qBinary):
+            oo = objects[0]
+            primary = oo.star1
+            secondary = oo.star2
+            orbit_params = oo.orbital_parameters
 
-        # Get masses and radii
-        mass1 = oo.star.mact
-        radius1_au = oo.star.R * cts.Rsun / cts.au
-
-        mass2 = oo.planets[0].Mp * cts.GMearth / cts.GMsun
-        radius2_au = oo.planets[0].Rp * cts.Rsun / cts.au
-
-        orbit_params = oo.planets[0].orbital_parameters
-
-
-    # TRIPLE CASE   
-    elif isinstance(objects[0], ac.Triple) and len(objects) == 1:
+        # TRIPLE / PIB CASES   
+        elif isinstance(objects[0], ac.Triple):
         
-        # Check eclipse of bounded binary (by convention this is object2)
-        oo = objects[0].object2
+            # Check eclipse of bounded binary (by convention this is object2)
+            oo = objects[0].object2
         
-        # TODO this is exactly as above and below! Reduce this!
-        # Get masses and radii
-        mass1 = oo.star1.mact
-        radius1_au = oo.star1.R * cts.Rsun / cts.au
+            # Hierarchichal triple
+            if isinstance(oo, ac.IsoBinary) or isinstance(oo, ac.qBinary):
+                primary = oo.star1
+                secondary = oo.star2
+                orbit_params = oo.orbital_parameters
+            # PIB
+            elif isinstance(oo, ac.PlanSys):
+                primary = oo.star
+                secondary = oo.planets[0]
+                orbit_params = secondary.orbital_parameters
 
-        mass2 = oo.star2.mact
-        radius2_au = oo.star2.R * cts.Rsun / cts.au
+    # DOUBLE / DILUTED SCENARIOS
+    elif len(objects) == 2:
 
-        orbit_params = oo.orbital_parameters
+        if np.any([isinstance(oo, ac.IsoBinary) for oo in objects]):
 
-    # EB case
-    elif isinstance(objects[0], ac.qBinary) and len(objects) == 1:
-        
-        oo = objects[0]
+            eb = np.array([isinstance(oo, ac.IsoBinary) for oo in objects])
+            oo = np.array(objects)[eb][0]
 
-        # Get masses and radii
-        mass1 = oo.star1.mact
-        radius1_au = oo.star1.R * cts.Rsun / cts.au
+            primary = oo.star1
+            secondary = oo.star2
+            orbit_params = oo.orbital_parameters
 
-        mass2 = oo.star2.mact
-        radius2_au = oo.star2.R * cts.Rsun / cts.au
+        elif np.any([isinstance(oo, ac.PlanSys) for oo in objects]):
 
-        orbit_params = oo.orbital_parameters
+            plansys = np.array([isinstance(oo, ac.PlanSys) for oo in objects])
+            oo = np.array(objects)[plansys][0]
+
+            primary = oo.star
+            secondary = oo.planets[0]
+            orbit_params = secondary.orbital_parameters
+
+    # Get masses and radii
+    mass1 = primary.mact
+    radius1_au = primary.R * cts.Rsun / cts.au
+
+    mass2 = secondary.mact
+    radius2_au = secondary.R * cts.Rsun / cts.au
 
     # Get relevant orbital parameters
     periods = orbit_params.P
