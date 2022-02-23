@@ -600,7 +600,6 @@ class SecondaryBkgParameters(BlendedStarParameters):
 
         return
 
-
     def draw_q(self):
         """
         Draw mass ratio.
@@ -609,25 +608,17 @@ class SecondaryBkgParameters(BlendedStarParameters):
 
         See moduleprior.q_def for more details.
         """
-        self.q = np.empty(len(self))
-
-        # TODO: awful; try to vectorize function in moduleprior
-        for i in range(len(self.q)):
-            self.q[i] = mp.q_def()
+        self.q = binary_mass_ratio(len(self))
         return
-
 
     def draw_mass(self):
         """Draw mass based on mass ratio and primary mass."""
-        size = len(self.primary.mass)
-
         # Draw q
         if not hasattr(self, 'q'):
             self.draw_q()
 
         self.mass = self.primary.mass * self.q
         return
-
 
     def draw(self):
         """Draw all parameters. Convenience function."""
@@ -677,11 +668,7 @@ class SecondaryStarParameters(StarParameters):
 
         See moduleprior.q_def for more details.
         """
-        self.q = np.empty(len(self))
-
-        # TODO: awful; try to vectorize function in moduleprior
-        for i in range(len(self)):
-            self.q[i] = mp.q_def()
+        self.q =binary_mass_ratio(len(self))
         return
 
 
@@ -900,3 +887,15 @@ def stellar_albedo(size):
     """Random sample of stellar albedos."""
     #TODO include reference for albedo values
     return np.random.rand(size) * 0.4 + 0.6
+
+
+def binary_mass_ratio(size):
+    """Draw mass ratio q."""
+    # TODO: use joint (q, primary mass) distribution instead of marginal
+
+    q = np.empty(size)
+    # TODO: awful; try to vectorize function in moduleprior
+    for i in range(len(q)):
+        q[i] = mp.q_def()
+        
+    return q
