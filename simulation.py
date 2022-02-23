@@ -317,22 +317,26 @@ def lightcurves(object_list, scenario='PLA', lc_cadence_min=2.0):
     """
     #  Construct light curves
     f = []
-    for objs in object_list:
+    for obj in object_list:
         # Get period from object list
-        if scenario == 'PLA':
-            P = objs[0].planets[0].orbital_parameters.P
-        elif scenario == 'BEB':
-            P = objs[0].orbital_parameters.P
+        if scenario.lower() in ['pla', 'planet', 'btp']:
+            P = obj[0].planets[0].orbital_parameters.P
+        elif scenario.lower() in ['beb', 'eb']:
+            P = obj[0].orbital_parameters.P
+        elif scenario.lower() == 'triple':
+            P = obj[0].object2.orbital_parameters.P
+        elif scenario.lower() == 'pib':
+            P = obj[0].object2.planets[0].orbital_parameters.P
 
         # define number of points according to period and cadence
         n_points = np.int(np.ceil(P * 24 * 60 / lc_cadence_min))
         tt = np.linspace(0, 1, n_points)
         try:
-            pickle.dump(objs[0], open("obj.p", "wb"))
+            pickle.dump(obj[0], open("obj.p", "wb"))
 #            print("LOGG:", objs[0].star.logg)
 #            print("TEFF:", objs[0].star.teff)
             lci = PHOT.PASTIS_PHOT(tt, 'TESS',
-                                   True, 0.0, 1.0, 0.0, *objs)
+                                   True, 0.0, 1.0, 0.0, *obj)
         except EBOPparamError as ex:
             print(ex)
             continue
