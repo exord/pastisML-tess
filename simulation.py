@@ -227,40 +227,43 @@ def check_brightness(objects, max_mag_diff=None):
         mmd = max_mag_diff
 
     # Introspection
-    # Case PLA or EB (i.e. non-diluted scenarios)
-    if (isinstance(objects[0], ac.PlanSys) or isinstance(objects[0], ac.qBinary)) \
-        and len(objects) == 1:
-        # This is a planet or EB scenario
-        return True
-
-    # Case BEB
-    elif (len(objects) == 2 and 
-          np.any([isinstance(oo, ac.IsoBinary) for oo in objects])):
-
-        eb = getEB(objects)
-        targ = getTarget(objects)
-
-        delta_mag = eb.get_mag('TESS') - targ.get_mag('TESS')
-
-    # Case BTP
-    elif (len(objects) == 2 and 
-          np.any([isinstance(oo, ac.PlanSys) for oo in objects])):
-
-        plansys = getPlanSys(objects)
-        targ = getTarget(objects)
-
-        delta_mag = plansys.star.get_mag('TESS') - targ.get_mag('TESS')
-
-    
-    # Case TRIPLE
-    elif isinstance(objects[0], ac.Triple) and len(objects) == 1:
-        # TODO this is very similar to the above
-        targ = objects[0].object1
-        eb = objects[0].object2
+    # Case PLA, EB or Triple/PiB (i.e. single-object scenarios)
+    if len(objects) == 1:
         
-        # Same condition as above
-        delta_mag = eb.get_mag('TESS') - targ.get_mag('TESS')
+        # Planet or EB scenarios
+        if isinstance(objects[0], ac.PlanSys) or isinstance(objects[0], ac.qBinary):
+            return True
 
+        elif isinstance(objects[0], ac.Triple):
+            # Check brightness of bounded binary or
+            # planetary system (object2) with respect to target star
+            # (by convention this is object1)
+            target = objects[0].object1
+            oo = objects[0].object2
+
+            # Triple scenario
+            if isinstance(oo, ac.IsoBinary) or isinstance(oo, ac.qBinary):
+                primary = oo.star1
+            
+            # PiB scenario
+            elif isinstance(oo, ac.PlanSys):
+                primary = oo.star
+
+    # DOUBLE / DILUTED SCENARIOS
+    elif len(objects) == 2:
+
+        target = getTarget(objects)
+
+        # BEB scenario
+        if np.any([isinstance(oo, ac.IsoBinary) for oo in objects]):
+            primary = getEB(objects).star1
+        
+        # BTP scenario
+        elif np.any([isinstance(oo, ac.PlanSys) for oo in objects]):
+            primary = getPlanSys(objects).star
+        
+    # compute delta magnitude
+    delta_mag = primary.get_mag('TESS') - target.get_mag('TESS')
     return (delta_mag > 0) and (delta_mag < mmd)
         
     
