@@ -26,7 +26,7 @@ import parameters as p
 
 
 
-def build_objects(input_dict, nsimu, return_rejected_stats):
+def build_objects(input_dict, nsimu, return_rejected_stats, verbose=False):
     """
     Build pastis objects.
 
@@ -94,33 +94,33 @@ def build_objects(input_dict, nsimu, return_rejected_stats):
         except EvolTrackError as ex:
             # If fail in Evolution track interpolation, print error and
             # continue
-            print(ex)
+            if verbose: print(ex)
             rejected['isochrone'] += 1
             continue
 
         # Check again for transits, this time using realistic parameters
         if not check_eclipses(system):
-            print('Not transiting')
+            if verbose: print('Not transiting')
             rejected['inclination'] += 1
             continue
 
         # Check system brightness
         if not check_brightness(system):
-            print('Magnitud difference > {}'.format(p.MAX_MAG_DIFF))
+            if verbose: print('Magnitud difference > {}'.format(p.MAX_MAG_DIFF))
             rejected['brightness'] += 1
             continue
 
         # Check depth
         try:
             if not check_depth(system, p.MIN_DEPTH):
-                print('Eclipse / transit depth < {}'.format(p.MIN_DEPTH))
+                if verbose: print('Eclipse / transit depth < {}'.format(p.MIN_DEPTH))
                 rejected['depth'] += 1
                 continue
             else:
                 pass
             
         except (EBOPparamError, AssertionError):
-            print('Encoutered EBOP limit when testing for depth or NaNs')
+            if verbose: print('Encoutered EBOP limit when testing for depth or NaNs')
             rejected['ebop'] += 1
             continue
 
