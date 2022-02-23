@@ -41,8 +41,7 @@ params = np.array([teff, logg, feh]).reshape(3, -1, order='F')
 len(params)
 
 
-scenarios_to_test = ['PLANET', 'BEB', 'TRIPLE', 'EB']
-scenarios_to_test = ['BTP']
+scenarios_to_test = ['PLANET', 'BEB', 'TRIPLE', 'EB', 'BTP', 'PIB']
 results = {}
 
 for SCENARIO in scenarios_to_test:
@@ -61,7 +60,9 @@ for SCENARIO in scenarios_to_test:
             P = obj[0].orbital_parameters.P
         elif SCENARIO.lower() == 'triple':
             P = obj[0].object2.orbital_parameters.P
-        
+        elif SCENARIO.lower() == 'pib':
+            P = obj[0].object2.planets[0].orbital_parameters.P
+
         # sample according to value of period
         tess_cadence_min = 2.0
         n_points = int(np.ceil(P * 24 * 60 / tess_cadence_min))
