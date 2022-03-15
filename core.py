@@ -797,7 +797,7 @@ class BoundPrimaryParameters(StarParameters):
 class OrbitParameters(Parameters):
     """Class of orbital parameters (except periods)."""
 
-    def __init__(self, orbittype='planet'):
+    def __init__(self, orbittype='planet', max_period=pp.MAX_PERIOD):
 
         valid_types = ['planet', 'binary', 'triple']
 
@@ -805,6 +805,7 @@ class OrbitParameters(Parameters):
             ("orbittype must be \'{}\'".format('\' or \''.join(valid_types)))
 
         self.type = orbittype
+        self.max_period = max_period
 
         self.parnames = {'orb_ecc': ['ecc', '', 'ecc'],
                          'orb_omega': ['omega_rad', 'rad', 'omega'],
@@ -812,6 +813,7 @@ class OrbitParameters(Parameters):
                          'orb_phtr': ['ph_tr', '', 'T0'],
                          'orb_period': ['period', 'P'],
                          }
+        return
 
     def draw(self, size):
         """
@@ -826,7 +828,13 @@ class OrbitParameters(Parameters):
 
         elif self.type == 'binary':
 
-            self.log_period = np.random.randn(size) * 2.28 + 5.03
+            if self.max_period is None:
+                self.log_period = np.random.randn(size) * 2.28 + 5.03
+            else:
+                a_ = -np.inf
+                b_ = (np.log(self.max_period) - 5.03)/2.28
+                self.log_period = st.truncnorm.rvs(a=a_, b=b_,
+                                                   loc=5.03, scale=2.28, size=size)
             self.period = np.exp(self.log_period)
 
             self.draw_angles_phase(size, thetamin_deg=50.0)

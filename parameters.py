@@ -21,3 +21,6 @@ MAX_MAG_DIFF = 8.0
 
 # Minimum depth for transit / eclipse in parts-per-millon
 MIN_DEPTH = 10
+
+# Maximum period
+MAX_PERIOD = None
