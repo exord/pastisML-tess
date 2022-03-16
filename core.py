@@ -11,6 +11,7 @@ FP or planetary.
 import os
 import numpy as np
 import pandas as pd
+import scipy.stats as st
 
 # from pastis import limbdarkening as ld
 from pastis.priors import moduleprior as mp
@@ -237,7 +238,8 @@ class PlanetParameters(Parameters):
 
     def __init__(self, table_path=os.path.join(pp.TABLE_DIR, 'Hsu',
                                                'table2.dat'),
-                 rates_column=4, interbindist='flat', minradius=None):
+                 rates_column=4, interbindist='flat', minradius=None,
+                 max_period=pp.MAX_PERIOD):
         """
         Prepare rates from Hsu+2019 table 2.
 
@@ -274,6 +276,12 @@ class PlanetParameters(Parameters):
         if minradius is not None:
             min_rad_cond = self.occ_rate_table.loc[:, 2] >= minradius
             self.rates = np.where(min_rad_cond, self.rates_orig, 0)
+        else:
+            self.rates = self.rates_orig
+
+        if max_period is not None:
+            max_per_cond = self.occ_rate_table.loc[:, 1] <= max_period
+            self.rates = np.where(max_per_cond, self.rates_orig, 0)
         else:
             self.rates = self.rates_orig
 

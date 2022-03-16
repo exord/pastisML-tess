@@ -188,7 +188,7 @@ def _draw_parameters_pla(ticstar, **kwargs):
     """Draw parameters for the Planet scenario."""
     minimum_radius = kwargs.pop('minradius', p.MIN_PLA_RADIUS)
     # Instatiate planetary parameters
-    planet = c.PlanetParameters(minradius=minimum_radius)
+    planet = c.PlanetParameters(minradius=minimum_radius, **kwargs)
     # Draw parameters
     planet.draw(len(ticstar))
 
@@ -215,7 +215,7 @@ def _draw_parameters_beb(ticstar, **kwargs):
     bkg_secondary.draw()
 
     # Draw orbit
-    orbit = c.OrbitParameters(orbittype='binary')
+    orbit = c.OrbitParameters(orbittype='binary', **kwargs)
     orbit.draw(len(ticstar))
 
     return [bkg_primary, bkg_secondary, orbit]

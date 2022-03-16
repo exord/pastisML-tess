@@ -23,4 +23,4 @@ MAX_MAG_DIFF = 8.0
 MIN_DEPTH = 10
 
 # Maximum period
-MAX_PERIOD = None
+MAX_PERIOD = 16
