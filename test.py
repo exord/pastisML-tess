@@ -52,6 +52,8 @@ for SCENARIO in scenarios_to_test:
     
     #  Construct light curves
     f = []
+    periods = []
+    periods_triple = []
     for obj in object_list:
         # Get period from object list
         if SCENARIO.lower() in ['pla', 'planet', 'btp']:
@@ -62,6 +64,14 @@ for SCENARIO in scenarios_to_test:
             P = obj[0].object2.orbital_parameters.P
         elif SCENARIO.lower() == 'pib':
             P = obj[0].object2.planets[0].orbital_parameters.P
+
+        if SCENARIO.lower() in ['pib', 'triple']:
+            Ptriple = obj[0].orbital_parameters.P
+            periods_triple.append(Ptriple)
+
+        periods.append(P)
+
+        
 
         # sample according to value of period
         tess_cadence_min = 2.0
@@ -76,6 +86,10 @@ for SCENARIO in scenarios_to_test:
             continue
     
         f.append([lci, P, n_points])
-
+           
     results[SCENARIO] = [object_list, rej, f]
- 
+    print('{}: Pmax = {:.2f}'.format(SCENARIO, np.max(periods)))
+    try:
+        print('{}: Ptriple = {:.2f}'.format(SCENARIO, np.max(periods_triple)))
+    except:
+        pass
