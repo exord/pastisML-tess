@@ -23,16 +23,27 @@ import utils as u
 import parameters as p
 
 
-
-
-
-def build_objects(input_dict, nsimu, return_rejected_stats, verbose=False):
+def build_objects(input_dict, nsimu, return_rejected_stats, verbose=False, **kwargs):
     """
     Build pastis objects.
 
     Uses parameters in input_dict, where more than one sample can in
     principle be provided.
+
+    Parameters
+    ----------
+    :param int nsimu: number of simulations to perform
+    :param bool return_rejected_stats: whether to return dict with number of rejected systems per cause
+    :param bool verbose: verbose flag
+
+    Other params
+    ------------
+    :param float min_depth: minimum depth filter in ppm (overrides default in parameters module)
+    :param float max_mag_diff: maximum magnitude difference between blended system and foreground bright star (overried default in parameters module)
     """
+    min_depth = kwargs.pop('min_depth', p.MIN_DEPTH)
+    max_mag_diff = kwargs.pop('max_mag_diff', p.MAX_MAG_DIFF)
+
     # Define dictionary that will be passed to PASTIS object builder
     dd = {}
     # Intialise list with objects (use list instead of array
@@ -105,15 +116,15 @@ def build_objects(input_dict, nsimu, return_rejected_stats, verbose=False):
             continue
 
         # Check system brightness
-        if not check_brightness(system):
-            if verbose: print('Magnitud difference > {}'.format(p.MAX_MAG_DIFF))
+        if not  check_brightness(system, max_mag_diff):
+            if verbose: print('Magnitud difference > {}'.format(max_mag_diff))
             rejected['brightness'] += 1
             continue
 
         # Check depth
         try:
-            if not check_depth(system, p.MIN_DEPTH):
-                if verbose: print('Eclipse / transit depth < {}'.format(p.MIN_DEPTH))
+            if not check_depth(system, min_depth):
+                if verbose: print('Eclipse / transit depth < {}'.format(min_depth))
                 rejected['depth'] += 1
                 continue
             else:

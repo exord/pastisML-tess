@@ -20,7 +20,7 @@ MIN_PLA_RADIUS = 1.0
 MAX_MAG_DIFF = 8.0
 
 # Minimum depth for transit / eclipse in parts-per-millon
-MIN_DEPTH = 10
+MIN_DEPTH = 300
 
 # Maximum period
 MAX_PERIOD = 16
