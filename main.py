@@ -56,23 +56,21 @@ def gen_files(params, part_num, pd_tess):
     
     # Compute model light curves
     lc = s.lightcurves(object_list, scenario=SCENARIO, lc_cadence_min=2.0)
-    
-
-    
+      
     out_file = open("./simulations/"+SCENARIO+"-lightcurves-index-"+str(part_num)+".txt", "w")
 
     out_file.write("Rejected: \n")
     out_file.write(str(rej) + "\n" )
     out_file.write("------------- \n")
 
-      
     #periods candidate
-    if SCENARIO=='BEB':
+    if SCENARIO=='BEB' or SCENARIO=='TRIPLE' :
         periods_dict = input_dict['IsoBinary1']['P']
-    elif SCENARIO=='PLA':
+    elif SCENARIO=='PLA' or SCENARIO=='BTP' or SCENARIO=='PIB':
         planet_key = input_dict['PlanSys1']['planet1']
         periods_dict = input_dict[planet_key]['P']
-
+    elif SCENARIO=='EB':
+        periods_dict =  input_dict['qBinary1']['P']
 
     for simu_number in range(len(lc)):
         out_file_line=[]
@@ -121,6 +119,41 @@ def gen_files(params, part_num, pd_tess):
             out_file.write("star_mact" + " "+ str(obj[0].star.mact) + ",")
             out_file.write("star_R" + " "+ str(obj[0].star.R) + ",")
             out_file.write("star_L" + " "+ str(obj[0].star.L) + ",")
+    
+        if SCENARIO == 'EB':
+            out_file.write("target_mact" + " "+ str(obj[0].star1.mact) + ",")
+            out_file.write("star2_mact" + " "+ str(obj[0].star2.mact) + ",")
+            out_file.write("target_R" + " "+ str(obj[0].star1.R) + ",")
+            out_file.write("star2_R" + " "+ str(obj[0].star2.R) + ",")
+            out_file.write("target_L" + " "+ str(obj[0].star1.L) + ",")
+            out_file.write("star2_L" + " "+ str(obj[0].star2.L) + ",")
+    
+        if SCENARIO == 'TRIPLE':
+            out_file.write("star1_mact" + " "+ str(obj[0].object2.star1.mact) + ",")
+            out_file.write("star2_mact" + " "+ str(obj[0].object2.star2.mact) + ",")
+            out_file.write("star1_R" + " "+ str(obj[0].object2.star1.R) + ",")
+            out_file.write("star2_R" + " "+ str(obj[0].object2.star2.R) + ",")
+            out_file.write("star1_L" + " "+ str(obj[0].object2.star1.L) + ",")
+            out_file.write("star2_L" + " "+ str(obj[0].object2.star2.L) + ",")                        
+            out_file.write("target_mact" + " "+ str(obj[0].object1.mact) + ",")            
+            out_file.write("target_R" + " "+ str(obj[0].object1.R) + ",")                    
+            out_file.write("target_L" + " "+ str(obj[0].object1.L) + ",")         
+            
+        if SCENARIO == 'BTP':
+            out_file.write("star_mact" + " "+ str(obj[0].star.mact) + ",")
+            out_file.write("star_R" + " "+ str(obj[0].star.R) + ",")
+            out_file.write("star_L" + " "+ str(obj[0].star.L) + ",")
+            out_file.write("target_mact" + " "+ str(obj[1].mact) + ",")            
+            out_file.write("target_R" + " "+ str(obj[1].R) + ",")                    
+            out_file.write("target_L" + " "+ str(obj[1].L) + ",")               
+            
+        if SCENARIO == 'PIB':
+            out_file.write("star_mact" + " "+ str(obj[0].object2.star.mact) + ",")
+            out_file.write("star_R" + " "+ str(obj[0].object2.star.R) + ",")
+            out_file.write("star_L" + " "+ str(obj[0].object2.star.L) + ",")
+            out_file.write("target_mact" + " "+ str(obj[0].object1.mact) + ",")            
+            out_file.write("target_R" + " "+ str(obj[0].object1.R) + ",")                    
+            out_file.write("target_L" + " "+ str(obj[0].object1.L) + ",")                  
                 
         out_file.write(simu_name + "\n")
     out_file.close()
@@ -148,71 +181,44 @@ print("Reading input files")
 
 # just a quick and dirty fix to append two .csv
 
-tess_ID_TEFF_LOGG_MH_filename_0 = "tic_dec66_00S__64_00S_ID_TEFF_LOGG_MH.csv"
-tess_MH_filename_0 = "tic_dec66_00S__64_00S_ID_MH.csv"
+# Para la próxima
 
+filenames = ["tic_dec66_00S__64_00S_", "tic_dec58_00S__56_00S_"]
 
-pd_ID_TEFF_LOGG_MH_0 = pd.read_csv(tess_ID_TEFF_LOGG_MH_filename_0 )
-TEFF_LOGG_MH_0 = pd_ID_TEFF_LOGG_MH_0[['Teff','logg','MH']].to_numpy()
+full_data=[]
+full_data_PD=pd.DataFrame([])
 
-MH_0 = pd.read_csv(tess_MH_filename_0)
-MH_0 = MH_0['MH'].to_numpy()
+for file in filenames:
+    TEFF_LOGG_MH_data_file = file+"ID_TEFF_LOGG_MH.csv"
+    MH_data_file = file+"ID_MH.csv"
+    
+    #read files   
+    data_pd = pd.read_csv(TEFF_LOGG_MH_data_file)
+    #we need the pandas 
+    data = data_pd[['Teff','logg','MH']].values.tolist()
 
-#debe haber una forma mas numpy para esto
-for a in TEFF_LOGG_MH_0:
-    if np.isnan(a[2]):
-        a[2] = np.random.choice(MH_0)
+    MH_data_pd = pd.read_csv(MH_data_file)
+    MH_data = MH_data_pd['MH'].values.tolist()
 
+    #debe haber una forma mas numpy para esto    
+    #filling the MH data
+    for star in data:
+        if np.isnan(star[2]):
+            star[2] = np.random.choice(MH_data)
 
-tess_ID_TEFF_LOGG_MH_filename_1 = "tic_dec58_00S__56_00S_ID_TEFF_LOGG_MH.csv"
-tess_MH_filename_1 = "tic_dec58_00S__56_00S_ID_MH.csv"
+    full_data = full_data+data
+    full_data_PD = pd.concat([full_data_PD, data_pd])
 
-pd_ID_TEFF_LOGG_MH_1 = pd.read_csv(tess_ID_TEFF_LOGG_MH_filename_1 )
-TEFF_LOGG_MH_1 = pd_ID_TEFF_LOGG_MH_1[['Teff','logg','MH']].to_numpy()
-
-MH_1 = pd.read_csv(tess_MH_filename_1)
-MH_1 = MH_1['MH'].to_numpy()
-
-#debe haber una forma mas numpy para esto
-for a in TEFF_LOGG_MH_1:
-    if np.isnan(a[2]):
-        a[2] = np.random.choice(MH_1)
-
-
-TEFF_LOGG_MH = np.concatenate((TEFF_LOGG_MH_0, TEFF_LOGG_MH_1))
-frames = [pd_ID_TEFF_LOGG_MH_0, pd_ID_TEFF_LOGG_MH_1]
-pd_ID_TEFF_LOGG_MH = pd.concat(frames)
-
-#para partir en batch de masomenos 10k estrellas, enumero las particiones también
+#Just to split into batchs of aprox 10k stars
 start = 0
-for part, end in enumerate(np.linspace(10000, len(TEFF_LOGG_MH), 16, dtype=int)):
-    if part>=0: #para cuando se cortaba 
+full_data = np.asarray(full_data)
+for part, end in enumerate(np.linspace(10000, len(full_data), 16, dtype=int)):
+    if part>=0: #to avoid restart in case of failure
         print (start, end, "Part:", part)
-        TEFF_LOGG_MH_slice = TEFF_LOGG_MH[start:end]
+        TEFF_LOGG_MH_slice = full_data[start:end]
         #para usar el mismo formato que habia antes
         params = TEFF_LOGG_MH_slice.flatten().reshape(3, len(TEFF_LOGG_MH_slice), order='F')
-        gen_files(params, part, pd_ID_TEFF_LOGG_MH)
-        # break
+        gen_files(params, part, full_data_PD)
     start = end
+    #nunca se si esto funca o no, just in case
     gc.collect()
-
-
-
-'''
-
-ipdb> input_dict['IsoBinary1']['P']
-array([ 462.45053955,   78.89342325,  338.3836427 , 3258.96699415,
-         82.21294071,  552.87109946,   22.42308718,  287.97043385,
-         15.41934606,  744.23270813, 6681.42561902,  248.10438678,
-         15.08143364,  855.28509171,   70.18562019,   13.73334664,
-        366.45847238,  434.75007145,  264.01064468,   10.38201648])
-
-ipdb> lc[0][1]
-287.9704338469746
-
-ipdb> lc[1][1]
-744.2327081324081
-
-ipdb> lc[2][1]
-6681.425619021072
-'''
