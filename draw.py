@@ -205,9 +205,13 @@ def _draw_parameters_beb(ticstar, **kwargs):
     This is done by drawing a background star and build the binary, much like
     the pastis object builder.
     """
+
+    maxdist = kwargs.pop('maxdist', p.MAX_DIST)
+
     # Build primary
     bkg_primary = c.BackgroundStarParameters(ticstar, minmass=0.5,
-                                             maxdist=5)
+                                             maxdist=maxdist)
+
     # TODO: this could be replaced with PrimaryBkgParameters (should be the same)
 
     # Draw parameters for primary
@@ -231,9 +235,12 @@ def _draw_parameters_bkgplansys(ticstar, **kwargs):
     This is done by drawing a background star and build the system, much like
     the pastis object builder.
     """
+
+    maxdist = kwargs.pop('maxdist', p.MAX_DIST)
+
     # Build planet host
     planet_host = c.BackgroundStarParameters(ticstar, minmass=0.5,
-                                             maxdist=5)
+                                             maxdist=maxdist)
     # Draw parameters for planet host
     planet_host.draw()
 
