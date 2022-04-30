@@ -38,7 +38,7 @@ import simulation as s
 
 
 # Read parameters
-from parameters import SCENARIO, NSIMU_PER_TIC_STAR
+from parameters import SCENARIO, NSIMU_PER_TIC_STAR, THETAMIN_DEG
 #import SCENARIO, NSIMU_PER_TIC_STAR
 
 #to force garbage collection
@@ -49,7 +49,8 @@ def gen_files(params, part_num, pd_tess):
     # Draw parameters for scenario
     
     input_dict, flag = d.draw_parameters(params, SCENARIO, 
-                                         nsimu=NSIMU_PER_TIC_STAR)
+                                         nsimu=NSIMU_PER_TIC_STAR,
+                                         thetamin_deg=THETAMIN_DEG)
         
     # Create objects 
     object_list, rej = s.build_objects(input_dict, np.sum(flag), True)

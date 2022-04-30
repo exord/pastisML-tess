@@ -239,7 +239,7 @@ class PlanetParameters(Parameters):
     def __init__(self, table_path=os.path.join(pp.TABLE_DIR, 'Hsu',
                                                'table2.dat'),
                  rates_column=4, interbindist='flat', minradius=None,
-                 max_period=pp.MAX_PERIOD):
+                 max_period=pp.MAX_PERIOD, **kwargs):
         """
         Prepare rates from Hsu+2019 table 2.
 
@@ -254,6 +254,8 @@ class PlanetParameters(Parameters):
 
         :param float or None minradius: minimum radius to consider. If None
         no limit is included.
+
+        The remaning parameters are passed to the draw functions.
         """
         validdist = ['flat', 'logflata']
 
@@ -305,10 +307,10 @@ class PlanetParameters(Parameters):
         self.drawn = 0
         return
 
-    def draw(self, size=1):
+    def draw(self, size=1, **kwargs):
         """Draw all parameters at once (convenience function)."""
-        self.draw_orbit(size)
-        self.draw_period_radius(size)
+        self.draw_orbit(size, **kwargs)
+        self.draw_period_radius(size, **kwargs)
         self.draw_mass(size)
         self.draw_albedo(size)
 
@@ -329,7 +331,7 @@ class PlanetParameters(Parameters):
 
         return pdict
 
-    def draw_period_radius(self, size=1):
+    def draw_period_radius(self, size=1, **kwargs):
         """Draw size parameters following the planet occurrence rates."""
         i = np.random.choice(len(self.w), size=size, p=self.w)
 
@@ -374,8 +376,12 @@ class PlanetParameters(Parameters):
         self.albedo = np.random.rand(size)
         return
 
-    def draw_orbit(self, size=1, thetamin_deg=50.0, eccentric=True):
+    def draw_orbit(self, size=1, **kwargs):
         """Draw orbital parameters, except period."""
+
+        thetamin_deg = kwargs.pop('thetamin_deg', pp.THETAMIN_DEG)
+        eccentric = kwargs.pop('eccentric', True)
+
         # Random inclination between thetamin and 90.0 deg
         k = np.cos(thetamin_deg * np.pi/180.0)
         self.incl_rad = np.arccos(k * (1 - np.random.rand(size)))
@@ -805,7 +811,9 @@ class BoundPrimaryParameters(StarParameters):
 class OrbitParameters(Parameters):
     """Class of orbital parameters (except periods)."""
 
-    def __init__(self, orbittype='planet', max_period=pp.MAX_PERIOD):
+    def __init__(self, orbittype='planet', **kwargs):
+
+        max_period = kwargs.pop('max_period', pp.MAX_PERIOD)
 
         valid_types = ['planet', 'binary', 'triple']
 
@@ -823,16 +831,19 @@ class OrbitParameters(Parameters):
                          }
         return
 
-    def draw(self, size):
+    def draw(self, size, **kwargs):
         """
         Draw all parameters.
 
         There is a small difference if it is a binary or a planet
         orbit.
         """
+
+        thetamin = kwargs.pop('thetamin_deg', 50.0)
+
         if self.type == 'planet':
             #TODO this is not working!
-            self.draw_orbit(size, thetamin_deg=50.0)
+            self.draw_orbit(size, thetamin_deg=thetamin)
 
         elif self.type == 'binary':
 
@@ -845,7 +856,7 @@ class OrbitParameters(Parameters):
                                                    loc=5.03, scale=2.28, size=size)
             self.period = np.exp(self.log_period)
 
-            self.draw_angles_phase(size, thetamin_deg=50.0)
+            self.draw_angles_phase(size, thetamin_deg=thetamin)
 
         elif self.type == 'triple':
             # Very long period, does not really affect as long

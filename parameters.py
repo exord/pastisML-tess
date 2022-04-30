@@ -24,3 +24,6 @@ MIN_DEPTH = 300
 
 # Maximum period
 MAX_PERIOD = 16
+
+# Lower bound to inclination angle
+THETAMIN_DEG = 80.0
