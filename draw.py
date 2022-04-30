@@ -308,8 +308,8 @@ def _draw_parameters_secondary(ticstar, **kwargs):
     binary_secondary.draw()
 
     # Draw orbit
-    orbit = c.OrbitParameters(orbittype='binary')
-    orbit.draw(len(ticstar))
+    orbit = c.OrbitParameters(orbittype='binary', **kwargs)
+    orbit.draw(len(ticstar), **kwargs)
 
     orbit.q = binary_secondary.q
 
