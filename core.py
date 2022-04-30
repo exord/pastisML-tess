@@ -839,7 +839,7 @@ class OrbitParameters(Parameters):
         orbit.
         """
 
-        thetamin = kwargs.pop('thetamin_deg', 50.0)
+        thetamin = kwargs.pop('thetamin_deg', pp.THETAMIN_DEG)
 
         if self.type == 'planet':
             #TODO this is not working!
