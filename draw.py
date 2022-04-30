@@ -239,7 +239,7 @@ def _draw_parameters_bkgplansys(ticstar, **kwargs):
 
     # Build planet
     planet = _draw_parameters_pla(planet_host, **kwargs)
-    planet.draw(len(planet_host))
+    planet.draw(len(planet_host), **kwargs)
 
     # Draw orbit
     # orbit = c.OrbitParameters(orbittype='planet')
@@ -265,8 +265,8 @@ def _draw_parameters_boundbinary(ticstar, **kwargs):
     binary_secondary.draw()
 
     # Draw orbit
-    orbit = c.OrbitParameters(orbittype='binary')
-    orbit.draw(len(ticstar))
+    orbit = c.OrbitParameters(orbittype='binary', **kwargs)
+    orbit.draw(len(ticstar), **kwargs)
 
     return [binary_primary, binary_secondary, orbit]
 
@@ -285,7 +285,7 @@ def _draw_parameters_boundplansys(ticstar, **kwargs):
 
     # Build planet
     planet = _draw_parameters_pla(planet_host, **kwargs)
-    planet.draw(len(planet_host))
+    planet.draw(len(planet_host), **kwargs)
 
     # Draw orbit
     # orbit = c.OrbitParameters(orbittype='planet')
