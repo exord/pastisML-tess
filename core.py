@@ -277,16 +277,18 @@ class PlanetParameters(Parameters):
 
         if minradius is not None:
             min_rad_cond = self.occ_rate_table.loc[:, 2] >= minradius
-            self.rates = np.where(min_rad_cond, self.rates_orig, 0)
         else:
-            self.rates = self.rates_orig
+            min_rad_cond = np.full_like(self.occ_rate_table.loc[:, 2], True)
 
         if max_period is not None:
             max_per_cond = self.occ_rate_table.loc[:, 1] <= max_period
-            self.rates = np.where(max_per_cond, self.rates_orig, 0)
         else:
-            self.rates = self.rates_orig
+            max_per_cond = np.full_like(self.occ_rate_table.loc[:, 1], True)
 
+        # Filter table
+        self.rates = np.where(min_rad_cond * max_per_cond, self.rates_orig, 0)
+
+        # Compute weights
         self.w = self.rates/self.rates.sum()
 
         # Parameter names
