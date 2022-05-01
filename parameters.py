@@ -16,6 +16,9 @@ TABLE_DIR = 'tables/'
 # Limits on radius
 MIN_PLA_RADIUS = 1.0
 
+# Limits on diluted planets
+MIN_DILUTED_PLANET_RADIUS = 10.0
+
 # Maximum magnitude difference between target and blended system
 MAX_MAG_DIFF = 8.0
 

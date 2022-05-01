@@ -245,7 +245,8 @@ def _draw_parameters_bkgplansys(ticstar, **kwargs):
     planet_host.draw()
 
     # Build planet
-    planet = _draw_parameters_pla(planet_host, **kwargs)
+    minimum_radius = kwargs.pop('min_radius', p.MIN_DILUTED_PLANET_RADIUS)
+    planet = _draw_parameters_pla(planet_host, minradius=minimum_radius, **kwargs)
     planet.draw(len(planet_host), **kwargs)
 
     # Draw orbit
@@ -291,7 +292,8 @@ def _draw_parameters_boundplansys(ticstar, **kwargs):
     planet_host.draw()
 
     # Build planet
-    planet = _draw_parameters_pla(planet_host, **kwargs)
+    minimum_radius = kwargs.pop('min_radius', p.MIN_DILUTED_PLANET_RADIUS)
+    planet = _draw_parameters_pla(planet_host, minradius=minimum_radius, **kwargs)
     planet.draw(len(planet_host), **kwargs)
 
     # Draw orbit
