@@ -29,4 +29,4 @@ MAX_PERIOD = 16
 THETAMIN_DEG = 80.0
 
 # Maximum distance for blended stars in pc
-MAX_DIST = 5.0
+MAX_DIST = 100.0
