@@ -286,6 +286,7 @@ class PlanetParameters(Parameters):
             max_per_cond = np.full_like(self.occ_rate_table.loc[:, 1], True)
 
         # Filter rates
+        # TODO allow filtering inside bin; up to now, only full bins are kept
         self.rates = np.where(min_rad_cond * max_per_cond, self.rates_orig, 0)
 
         # Compute weights

@@ -29,7 +29,7 @@ MIN_DEPTH = 300
 MAX_PERIOD = 16
 
 # Lower bound to inclination angle
-THETAMIN_DEG = 80.0
+THETAMIN_DEG = 85.0
 
 # Maximum distance for blended stars in pc
-MAX_DIST = 100.0
+MAX_DIST = 200.0
