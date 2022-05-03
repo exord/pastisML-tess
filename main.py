@@ -176,15 +176,10 @@ def gen_files(params, part_num, pd_tess):
 
 
 print("Reading input files")
-#tess_ID_TEFF_LOGG_MH_filename_0 = "tic_dec30_00S__28_00S_ID_TEFF_LOGG_MH.csv"
-#tess_MH_filename_0 = "tic_dec30_00S__28_00S_ID_MH.csv"
+#just the names, next version just parse some directory or something
+filenames = ["tic_dec66_00S__64_00S_","tic_dec58_00S__56_00S_","tic_dec30_00S__28_00S_","tic_dec74_00S__72_00S_","tic_dec62_00S__60_00S_","tic_dec28_00S__26_00S_","tic_dec88_00S__86_00S_"]
 
-
-# just a quick and dirty fix to append two .csv
-
-# Para la próxima
-
-filenames = ["tic_dec66_00S__64_00S_", "tic_dec58_00S__56_00S_"]
+filenames = filenames * 5 #quick and dirty way to repeat stars, I love it
 
 full_data=[]
 full_data_PD=pd.DataFrame([])
@@ -210,10 +205,10 @@ for file in filenames:
     full_data = full_data+data
     full_data_PD = pd.concat([full_data_PD, data_pd])
 
-#Just to split into batchs of aprox 10k stars
+#Just to split into batchs 
 start = 0
 full_data = np.asarray(full_data)
-for part, end in enumerate(np.linspace(10000, len(full_data), 16, dtype=int)):
+for part, end in enumerate(np.linspace(20000, len(full_data), 16, dtype=int)):
     if part>=0: #to avoid restart in case of failure
         print (start, end, "Part:", part)
         TEFF_LOGG_MH_slice = full_data[start:end]
