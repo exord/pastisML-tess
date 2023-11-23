@@ -125,7 +125,7 @@ def gen_files(params, part_num, pd_tess):
             out_file.write("target_mact" + " "+ str(obj[0].star1.mact) + ",")
             out_file.write("star2_mact" + " "+ str(obj[0].star2.mact) + ",")
             out_file.write("target_R" + " "+ str(obj[0].star1.R) + ",")
-            out_file.write("star2_R" + " "+ str(obj[0].star2.R) + ",")
+            out_file.write("star2_R" + "  "+ str(obj[0].star2.R) + ",")
             out_file.write("target_L" + " "+ str(obj[0].star1.L) + ",")
             out_file.write("star2_L" + " "+ str(obj[0].star2.L) + ",")
     
@@ -188,6 +188,8 @@ for file in filenames:
     TEFF_LOGG_MH_data_file = file+"ID_TEFF_LOGG_MH.csv"
     MH_data_file = file+"ID_MH.csv"
     
+    print("Reading:",TEFF_LOGG_MH_data_file)
+
     #read files   
     data_pd = pd.read_csv(TEFF_LOGG_MH_data_file)
     #we need the pandas 

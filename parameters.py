@@ -7,7 +7,7 @@ Created on Fri May  7 17:34:03 2021
 """
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-SCENARIO = 'PLA'
+SCENARIO = 'BTP'
 NSIMU_PER_TIC_STAR = 1
 
 # Directory with tables
@@ -17,7 +17,7 @@ TABLE_DIR = 'tables/'
 MIN_PLA_RADIUS = 1.0
 
 # Limits on diluted planets
-MIN_DILUTED_PLANET_RADIUS = 1.0
+MIN_DILUTED_PLANET_RADIUS = 8.0
 
 # Maximum magnitude difference between target and blended system
 MAX_MAG_DIFF = 8.0
