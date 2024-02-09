@@ -236,28 +236,41 @@ class TargetStarParameters(StarParameters):
 class PlanetParameters(Parameters):
     """class of realistic parameters for the planet scenario."""
 
-    def __init__(self, table_path=os.path.join(pp.TABLE_DIR, 'Hsu',
+    def __init__(self, 
+                 minradius=None,
+                 max_period=pp.MAX_PERIOD, 
+                 method='hsu',
+                 table_path=os.path.join(pp.TABLE_DIR, 'Hsu',
                                                'table2.dat'),
-                 rates_column=4, interbindist='flat', minradius=None,
-                 max_period=pp.MAX_PERIOD, **kwargs):
+                 rates_column=4, 
+                 interbindist='flat', 
+                 **kwargs):
         """
-        Prepare rates from Hsu+2019 table 2.
+        If method is 'hsu', prepare rates from Hsu+2019 table 2.
 
         This table contains the occurrence rates measured in two different
         ways (cols. 4 and 6) for each bin of period (cols. 0 and 1) and
         planet size (cols. 2 and 3)
 
+        :param float or None minradius: minimum radius to consider. If None
+        no limit is included.
+
+        :params str method: whether to use "Hsu table" ('hsu') or uniform distributions ('uniform').
+        
         :param int rates_column: chooses which rate to use. Options 4 or 6
 
         :param str interbindist: defines method to sample within bin. Options
         are "flat" or "logflat"
 
-        :param float or None minradius: minimum radius to consider. If None
-        no limit is included.
-
         The remaning parameters are passed to the draw functions.
         """
-        validdist = ['flat', 'logflata']
+        validmethod = ['hsu', 'uniform']
+        
+        assert method in validmethod, \
+            ("method must be \'{}\'".format('\' or \''.join(validmethod)))
+        self.method = method
+        
+        validdist = ['flat', 'logflat']
 
         assert interbindist in validdist, \
             ("interbindist must be \'{}\'".format('\' or \''.join(validdist)))
@@ -336,19 +349,38 @@ class PlanetParameters(Parameters):
 
     def draw_period_radius(self, size=1, **kwargs):
         """Draw size parameters following the planet occurrence rates."""
-        i = np.random.choice(len(self.w), size=size, p=self.w)
+        
+        if self.method == 'hsu':
+            
+            # Randomly draw a line with weights self.w
+            i = np.random.choice(len(self.w), size=size, p=self.w)
 
-        A = self.occ_rate_table.iloc[i, [0, 1, 2, 3]].to_numpy()
+            A = self.occ_rate_table.iloc[i, [0, 1, 2, 3]].to_numpy()
 
-        deltap = A[:, 1] - A[:, 0]
-        deltar = A[:, 3] - A[:, 2]
+            deltap = A[:, 1] - A[:, 0]
+            deltar = A[:, 3] - A[:, 2]
+            
+            pmin = A[:, 0]
+            rmin = A[:, 2]
 
+        elif self.method == 'uniform':
+            
+            # Get all columns not filtered in __init__
+            A = self.occ_rate_table.loc[self.w > 0, [0, 1, 2, 3]].to_numpy()
+                        
+            # Rango en períodos y radios
+            deltap = A[:, 1].max() - A[:, 0].min()
+            deltar = A[:, 3].max() - A[:, 2].min()
+            
+            pmin = A[:, 0].min()
+            rmin = A[:, 2].min()      
+            
         # Sample randomly within bin
         u = np.random.rand(size, 2)
 
         if self.sampledist == 'flat':
-            p = u[:, 0] * deltap + A[:, 0]
-            r = u[:, 1] * deltar + A[:, 2]
+            p = u[:, 0] * deltap + pmin
+            r = u[:, 1] * deltar + rmin
 
         elif self.sampledist == 'logflat':
             # TDOO draw log-flat
