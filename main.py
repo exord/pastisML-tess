@@ -45,12 +45,13 @@ from parameters import SCENARIO, NSIMU_PER_TIC_STAR, THETAMIN_DEG
 import gc
 
 
-def gen_files(params, part_num, pd_tess):
+def gen_files(params, part_num, pd_tess, **kwargs):
     # Draw parameters for scenario
     
     input_dict, flag = d.draw_parameters(params, SCENARIO, 
                                          nsimu=NSIMU_PER_TIC_STAR,
-                                         thetamin_deg=THETAMIN_DEG)
+                                         thetamin_deg=THETAMIN_DEG,
+                                         **kwargs)
         
     # Create objects 
     object_list, rej = s.build_objects(input_dict, np.sum(flag), True)
@@ -216,7 +217,7 @@ for part, end in enumerate(np.linspace(20000, len(full_data), 16, dtype=int)):
         TEFF_LOGG_MH_slice = full_data[start:end]
         #para usar el mismo formato que habia antes
         params = TEFF_LOGG_MH_slice.flatten().reshape(3, len(TEFF_LOGG_MH_slice), order='F')
-        gen_files(params, part, full_data_PD)
+        gen_files(params, part, full_data_PD, method='uniform')
     start = end
     #nunca se si esto funca o no, just in case
     gc.collect()
